@@ -1,0 +1,20 @@
+{
+  "name": "wp-translate-tool",
+  "version": "1.0.0",
+  "description": "Translate WordPress plugins using DeepL",
+  "type": "module",
+  "scripts": {
+    "build": "node build.ts",
+    "clean": "rm -rf dist",
+    "start": "node dist/wp-translate.mjs",
+    "typecheck": "tsc --noEmit"
+  },
+  "keywords": [],
+  "author": "Paul Faulkner (https://headwall-hosting.com)",
+  "license": "GPL-2.0-or-later",
+  "devDependencies": {
+    "@types/node": "^25.3.5",
+    "esbuild": "^0.27.3",
+    "typescript": "^5.9.3"
+  }
+}
