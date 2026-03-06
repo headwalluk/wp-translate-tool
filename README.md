@@ -70,11 +70,20 @@ wp-translate ./my-plugin/
 # Using an absolute path
 wp-translate /var/www/html/wp-content/plugins/my-plugin/
 
+# Preview what would be translated (no API calls, no file changes)
+wp-translate --dry-run ./my-plugin/
+
+# Check DeepL API character quota
+wp-translate --usage
+
 # Check installed version
 wp-translate --version
 
 # Check for updates
 wp-translate --check-update
+
+# Full help
+wp-translate --help
 ```
 
 ---

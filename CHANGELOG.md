@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.0] - 2026-03-06
+
+### Added
+
+- `--help` / `-h` flag with full usage documentation
+- `--dry-run` flag to preview what would be translated without calling the API or modifying files
+- `--usage` flag to check DeepL API character quota
+- Progress indicators during batch and contextual translation
+- End-of-run summary showing total locales and strings translated
+
 ## [1.1.0] - 2026-03-06
 
 ### Added

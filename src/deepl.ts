@@ -2,6 +2,7 @@ import https from 'https';
 import { PoEntry, sanitize } from './po-parser.js';
 
 const BATCH_SIZE = 50;
+const API_HOST = 'api-free.deepl.com';
 
 function mapLocale(wpLocale: string): string {
   const parts = wpLocale.replace('_', '-').split('-');
@@ -15,17 +16,22 @@ interface DeepLResponse {
   translations: Array<{ text: string }>;
 }
 
-function apiRequest(authKey: string, body: object): Promise<DeepLResponse> {
-  const postData = JSON.stringify(body);
+function apiRequest(authKey: string, path: string, body?: object): Promise<any> {
+  const postData = body ? JSON.stringify(body) : undefined;
+  const method = postData ? 'POST' : 'GET';
+  const headers: Record<string, string | number> = {
+    'Authorization': `DeepL-Auth-Key ${authKey}`,
+  };
+  if (postData) {
+    headers['Content-Type'] = 'application/json';
+    headers['Content-Length'] = Buffer.byteLength(postData);
+  }
+
   const options: https.RequestOptions = {
-    hostname: 'api-free.deepl.com',
-    path: '/v2/translate',
-    method: 'POST',
-    headers: {
-      'Authorization': `DeepL-Auth-Key ${authKey}`,
-      'Content-Type': 'application/json',
-      'Content-Length': Buffer.byteLength(postData),
-    },
+    hostname: API_HOST,
+    path,
+    method,
+    headers,
   };
 
   return new Promise((resolve, reject) => {
@@ -41,7 +47,7 @@ function apiRequest(authKey: string, body: object): Promise<DeepLResponse> {
       });
     });
     req.on('error', reject);
-    req.write(postData);
+    if (postData) req.write(postData);
     req.end();
   });
 }
@@ -52,14 +58,22 @@ export async function translateBatch(
   authKey: string,
 ): Promise<void> {
   const deepLLang = mapLocale(targetLang);
+  const totalBatches = Math.ceil(entries.length / BATCH_SIZE);
 
   for (let i = 0; i < entries.length; i += BATCH_SIZE) {
+    const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+    if (totalBatches > 1) {
+      process.stdout.write(`   Translating batch ${batchNum}/${totalBatches}...\r`);
+    }
     const batch = entries.slice(i, i + BATCH_SIZE);
     const texts = batch.map(e => e.msgid!);
-    const result = await apiRequest(authKey, { text: texts, target_lang: deepLLang });
+    const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', { text: texts, target_lang: deepLLang });
     result.translations.forEach((t, index) => {
       batch[index].newTranslation = `msgstr "${sanitize(t.text)}"`;
     });
+  }
+  if (totalBatches > 1) {
+    process.stdout.write(''.padEnd(40) + '\r');
   }
 }
 
@@ -70,8 +84,12 @@ export async function translateContextual(
 ): Promise<void> {
   const deepLLang = mapLocale(targetLang);
 
-  for (const item of entries) {
-    const result = await apiRequest(authKey, {
+  for (let i = 0; i < entries.length; i++) {
+    const item = entries[i];
+    if (entries.length > 1) {
+      process.stdout.write(`   Translating contextual ${i + 1}/${entries.length}...\r`);
+    }
+    const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', {
       text: [item.msgid],
       target_lang: deepLLang,
       context: item.msgctxt,
@@ -80,4 +98,24 @@ export async function translateContextual(
       item.newTranslation = `msgstr "${sanitize(result.translations[0].text)}"`;
     }
   }
+  if (entries.length > 1) {
+    process.stdout.write(''.padEnd(40) + '\r');
+  }
+}
+
+interface UsageResponse {
+  character_count: number;
+  character_limit: number;
+}
+
+export async function checkUsage(authKey: string): Promise<void> {
+  const result: UsageResponse = await apiRequest(authKey, '/v2/usage');
+  const used = result.character_count;
+  const limit = result.character_limit;
+  const remaining = limit - used;
+  const pct = ((used / limit) * 100).toFixed(1);
+
+  console.log(`DeepL API usage:`);
+  console.log(`  Characters used:      ${used.toLocaleString()} / ${limit.toLocaleString()} (${pct}%)`);
+  console.log(`  Characters remaining: ${remaining.toLocaleString()}`);
 }
