@@ -1,6 +1,6 @@
 {
   "name": "wp-translate-tool",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Translate WordPress plugins using DeepL",
   "type": "module",
   "scripts": {

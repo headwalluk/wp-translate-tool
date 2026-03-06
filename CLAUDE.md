@@ -22,7 +22,7 @@ The CLI flow is sequential: load config → validate → find/create POT → for
 index.ts (entry point, orchestration)
 ├── config.ts        — loads DEEPL_AUTH_KEY from ~/.config/deepl.env
 ├── validation.ts    — locale format regex, checks `wp` is in PATH
-├── pot.ts           — finds .pot in languages/, generates via wp-cli if missing
+├── pot.ts           — always regenerates .pot from source via wp-cli
 ├── po-parser.ts     — stateful line-by-line PO parser, preserves raw lines
 ├── deepl.ts         — HTTPS calls to api-free.deepl.com/v2/translate
 └── wp-cli.ts        — execSync wrappers for `wp i18n make-pot/update-po/make-mo`

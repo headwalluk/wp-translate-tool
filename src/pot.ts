@@ -5,26 +5,27 @@ import { makePot } from './wp-cli.js';
 export function findOrCreatePot(pluginPath: string): string {
   const langDir = join(pluginPath, 'languages');
 
+  // Determine output path from existing .pot or plugin basename
+  let outputPath: string;
   if (existsSync(langDir)) {
     const potFiles = readdirSync(langDir).filter(f => f.endsWith('.pot'));
-    if (potFiles.length > 0) {
-      return join(langDir, potFiles[0]);
-    }
+    outputPath = potFiles.length > 0
+      ? join(langDir, potFiles[0])
+      : join(langDir, `${basename(pluginPath)}.pot`);
+  } else {
+    outputPath = join(langDir, `${basename(pluginPath)}.pot`);
   }
 
-  console.log(`No .pot file found in ${langDir}/. Generating one...`);
-  const outputPath = join(langDir, `${basename(pluginPath)}.pot`);
+  // Always regenerate from source to pick up new strings
+  console.log('>> Regenerating .pot from plugin source...');
   makePot(pluginPath, outputPath);
 
-  if (existsSync(langDir)) {
-    const potFiles = readdirSync(langDir).filter(f => f.endsWith('.pot'));
-    if (potFiles.length > 0) {
-      return join(langDir, potFiles[0]);
-    }
+  if (!existsSync(outputPath)) {
+    console.error('Error: Failed to generate .pot file.');
+    process.exit(1);
   }
 
-  console.error('Error: Failed to generate .pot file.');
-  process.exit(1);
+  return outputPath;
 }
 
 export function detectLocales(pluginPath: string): string[] | null {

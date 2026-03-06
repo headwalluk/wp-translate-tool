@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.0.1] - 2026-03-06
+
+### Fixed
+
+- Always regenerate `.pot` from plugin source before translating, ensuring new strings are picked up on subsequent runs
+- Handle trailing slashes in plugin paths (e.g., `./my-plugin/`) that caused empty filenames
+- Parse `export` prefix in `~/.config/deepl.env` (e.g., `export DEEPL_AUTH_KEY=...`)
+
 ## [1.0.0] - 2026-03-06
 
 ### Added
