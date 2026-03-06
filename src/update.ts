@@ -50,6 +50,7 @@ export async function checkForUpdate(): Promise<void> {
       console.log(`\nTo update:\n`);
       console.log(`  sudo curl -fsSL -o /usr/local/bin/wp-translate \\`);
       console.log(`    https://github.com/${REPO}/releases/latest/download/wp-translate.mjs`);
+      process.exit(2);
     }
   } catch (err) {
     console.error('Could not check for updates:', (err as Error).message);

@@ -79,11 +79,27 @@ wp-translate --usage
 # Check installed version
 wp-translate --version
 
-# Check for updates
+# Check for updates (exit code 0 = up to date, 2 = update available)
 wp-translate --check-update
 
 # Full help
 wp-translate --help
+```
+
+### Exit codes
+
+| Code | Meaning |
+|---|---|
+| `0` | Success / up to date |
+| `1` | Error |
+| `2` | Update available (`--check-update` only) |
+
+This makes `--check-update` scriptable:
+
+```bash
+if ! wp-translate --check-update >/dev/null 2>&1; then
+  echo "A new version of wp-translate is available"
+fi
 ```
 
 ---
