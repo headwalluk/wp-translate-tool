@@ -69,6 +69,12 @@ wp-translate ./my-plugin/
 
 # Using an absolute path
 wp-translate /var/www/html/wp-content/plugins/my-plugin/
+
+# Check installed version
+wp-translate --version
+
+# Check for updates
+wp-translate --check-update
 ```
 
 ---
@@ -107,6 +113,7 @@ The build step uses esbuild to bundle all TypeScript source into a single file w
 ```
 src/
   index.ts        CLI entry point and orchestration
+  update.ts       Version check against GitHub releases
   config.ts       DeepL API key loading from ~/.config/deepl.env
   validation.ts   Locale format validation and dependency checks
   pot.ts          POT file discovery, generation, and locale detection

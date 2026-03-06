@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.1.0] - 2026-03-06
+
+### Added
+
+- `--check-update` flag to check for newer releases on GitHub
+- `--version` / `-v` flag to display the installed version
+- Version is embedded at build time from `package.json`
+
 ## [1.0.1] - 2026-03-06
 
 ### Fixed

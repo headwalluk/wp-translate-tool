@@ -6,15 +6,20 @@ import { findOrCreatePot, detectLocales } from './pot.js';
 import { parsePo, injectLanguageHeader, applyTranslations, writePo, getUntranslated } from './po-parser.js';
 import { translateBatch, translateContextual } from './deepl.js';
 import { updatePo, makeMo } from './wp-cli.js';
+import { checkForUpdate, getVersion } from './update.js';
 
 const DEFAULT_LOCALES = 'en_GB,fr_FR,de_DE,es_ES,nl_NL,it_IT,pl_PL,el_GR';
 
 function parseArgs(): { pluginPath: string; locales: string[] } {
-  const pluginPath = process.argv[2] ? resolve(process.argv[2]) : '';
-  let localesInput = process.argv[3];
+  const args = process.argv.slice(2);
+  const positional = args.filter(a => !a.startsWith('-'));
+  const pluginPath = positional[0] ? resolve(positional[0]) : '';
+  let localesInput = positional[1];
 
   if (!pluginPath) {
     console.error(`Usage: ${basename(process.argv[1])} <plugin-path> [locales]`);
+    console.error(`       ${basename(process.argv[1])} --check-update`);
+    console.error(`       ${basename(process.argv[1])} --version`);
     console.error(`Example: ${basename(process.argv[1])} . en_GB,fr_FR,de_DE`);
     process.exit(1);
   }
@@ -60,6 +65,18 @@ async function processLocale(
 }
 
 async function main() {
+  const args = process.argv.slice(2);
+
+  if (args.includes('--version') || args.includes('-v')) {
+    console.log(getVersion());
+    return;
+  }
+
+  if (args.includes('--check-update')) {
+    await checkForUpdate();
+    return;
+  }
+
   const { deeplAuthKey } = loadConfig();
   const { pluginPath, locales } = parseArgs();
 

@@ -1,5 +1,7 @@
 import { build } from 'esbuild';
-import { chmodSync } from 'fs';
+import { chmodSync, readFileSync } from 'fs';
+
+const pkg = JSON.parse(readFileSync('package.json', 'utf8'));
 
 await build({
   entryPoints: ['src/index.ts'],
@@ -10,6 +12,9 @@ await build({
   outfile: 'dist/wp-translate.mjs',
   banner: {
     js: '#!/usr/bin/env node',
+  },
+  define: {
+    __VERSION__: JSON.stringify(pkg.version),
   },
   minify: false,
 });
