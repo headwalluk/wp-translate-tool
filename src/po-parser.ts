@@ -117,6 +117,25 @@ export function sanitize(text: string): string {
     .replace(/\t/g, '\\t');
 }
 
+export function unsanitize(text: string): string {
+  let out = '';
+  for (let i = 0; i < text.length; i++) {
+    if (text[i] === '\\' && i + 1 < text.length) {
+      const next = text[i + 1];
+      if (next === 'n') out += '\n';
+      else if (next === 't') out += '\t';
+      else if (next === 'r') out += '\r';
+      else if (next === '"') out += '"';
+      else if (next === '\\') out += '\\';
+      else out += next;
+      i++;
+    } else {
+      out += text[i];
+    }
+  }
+  return out;
+}
+
 export function getUntranslated(entries: PoEntry[]): { standard: PoEntry[]; contextual: PoEntry[] } {
   const needs = entries.filter(e => e.msgid && e.msgid !== '' && e.msgstr === '');
   return {

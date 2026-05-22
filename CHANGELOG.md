@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.2.2] - 2026-05-22
+
+### Fixed
+
+- Unescape PO format sequences (`\"`, `\\`, `\n`, `\t`, `\r`) before sending strings to DeepL, so embedded quotes no longer round-trip as `\"Host\"` in the rendered output
+
 ## [1.2.1] - 2026-03-06
 
 ### Changed

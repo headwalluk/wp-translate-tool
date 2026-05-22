@@ -1,5 +1,5 @@
 import https from 'https';
-import { PoEntry, sanitize } from './po-parser.js';
+import { PoEntry, sanitize, unsanitize } from './po-parser.js';
 
 const BATCH_SIZE = 50;
 const API_HOST = 'api-free.deepl.com';
@@ -66,7 +66,7 @@ export async function translateBatch(
       process.stdout.write(`   Translating batch ${batchNum}/${totalBatches}...\r`);
     }
     const batch = entries.slice(i, i + BATCH_SIZE);
-    const texts = batch.map(e => e.msgid!);
+    const texts = batch.map(e => unsanitize(e.msgid!));
     const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', { text: texts, target_lang: deepLLang });
     result.translations.forEach((t, index) => {
       batch[index].newTranslation = `msgstr "${sanitize(t.text)}"`;
@@ -90,9 +90,9 @@ export async function translateContextual(
       process.stdout.write(`   Translating contextual ${i + 1}/${entries.length}...\r`);
     }
     const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', {
-      text: [item.msgid],
+      text: [unsanitize(item.msgid!)],
       target_lang: deepLLang,
-      context: item.msgctxt,
+      context: item.msgctxt ? unsanitize(item.msgctxt) : item.msgctxt,
     });
     if (result.translations.length > 0) {
       item.newTranslation = `msgstr "${sanitize(result.translations[0].text)}"`;
