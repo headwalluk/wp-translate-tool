@@ -326,7 +326,7 @@ per-entry contextual path.
 - [x] `translateContextual()` uses `msgctxt ?? extractedComments` (msgctxt precedence)
 - [x] Lossless round-trip verified (`#.`/`#:` lines preserved in output `.po`)
 - [x] CHANGELOG + README + bump to v1.6.0 + build
-- [ ] Commit, tag `v1.6.0`, push main + tag — *user-triggered*
+- [x] Commit, tag `v1.6.0`, push main + tag — released 18 June 2026
 
 **Verification (18 June 2026):**
 - DeepL probe confirmed context flips output (de): `Folder` → `Broschüre`→`Ordner`,
@@ -337,6 +337,27 @@ per-entry contextual path.
 - Round-trip lossless; `.mo` compiled.
 
 ---
+
+## Future Ideas / Backlog (from dogfooding, post-v1.6.1)
+
+Candidates for a future milestone — none committed, captured so they aren't
+rediscovered:
+
+1. **Don't translate plugin-header strings.** The Plugin Name / Description /
+   Author / URI header strings are currently machine-translated (`Easy Logo
+   Carousel` → `Einfaches Logo-Karussell`, `Quick 2FA` → `Schnelle 2FA`). The
+   *Name*, URIs, and author usually shouldn't be translated. These are precisely
+   identifiable — they carry auto-generated `#. Plugin Name of the plugin` /
+   `#. ... URI of the plugin` extracted comments, which the M4 parser already
+   recognises and ignores. A guard could keep them verbatim. Strong M5 candidate.
+2. **Fuzzy handling.** The tool keys off empty `msgstr` only, so a `fuzzy`-flagged
+   entry (source text changed → `update-po` marks it fuzzy but keeps the old
+   translation) is never refreshed. Consider treating fuzzy as translatable
+   (carefully) or at least reporting fuzzy counts in the run summary.
+3. **Curated lists are living data.** `AMERICAN_TO_BRITISH` (`src/english.ts`) and
+   the acronym denylist (`src/acronyms.ts`) are hand-curated; expect to extend
+   them as dogfooding surfaces gaps (`grayscale` → `greyscale` was the first,
+   shipped in v1.6.1). Low effort, ongoing.
 
 ## Technical Debt
 
