@@ -1,9 +1,15 @@
 # wp-translate-tool — Project Tracker
 
-**Version:** 1.6.0 (unreleased — M1–M4 verified, pending final release)
+**Version:** 1.6.1 (released)
 **Last Updated:** 18 June 2026
-**Current Phase:** All milestones (1–4) complete & verified; ready for final release
-**Overall Progress:** 100% of planned milestones (pending commit/tag/release)
+**Current Phase:** All milestones (1–4) complete, released, and dogfooded on `easy-logo-carousel`
+**Overall Progress:** 100% of planned milestones
+
+**Post-release patches:**
+- v1.6.1 — added `grayscale` → `greyscale` to the en-GB conversion map (gap found
+  while dogfooding `easy-logo-carousel`). Confirmed: manual poedit fixes are never
+  overwritten on re-run (only empty `msgstr` entries are filled; `update-po`
+  preserves existing translations).
 
 ---
 

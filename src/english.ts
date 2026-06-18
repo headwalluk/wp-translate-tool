@@ -97,6 +97,7 @@ const AMERICAN_TO_BRITISH = new Map<string, string>([
   ['installment', 'instalment'],
   // misc
   ['gray', 'grey'], ['grays', 'greys'], ['grayed', 'greyed'],
+  ['grayscale', 'greyscale'], ['grayscales', 'greyscales'],
   ['aluminum', 'aluminium'], ['airplane', 'aeroplane'],
   ['mustache', 'moustache'], ['plow', 'plough'], ['plows', 'ploughs'],
   ['pajamas', 'pyjamas'],
