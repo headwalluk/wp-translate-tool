@@ -2,6 +2,24 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.4.0] - 2026-06-18
+
+### Added
+
+- Acronym guard for non-English locales. Common technical acronyms (`TLS`, `API`, `TOTP`, `SMTP`, `URL`, `ID`, `UTC`, etc.) whose entire `msgid` is exactly the acronym are now kept verbatim instead of being sent to DeepL, which would otherwise mangle them (e.g. `TOTP` → "Une vraie plaie"). Matching is exact and case-sensitive; compound strings like `Enable TLS` still go to DeepL, where surrounding words provide context
+
+## [1.3.0] - 2026-06-18
+
+### Added
+
+- English target locales are now handled locally, with no DeepL calls (machine-translating en→en is a no-op that only corrupted short strings like `TLS` into "The latest security standards"):
+  - `en` / `en_US` pass through unchanged
+  - `en_GB`, `en_AU`, `en_NZ`, etc. have American spellings converted to British-style English (the `-ize`/`-yze` morphology, plus a curated word list such as `color` → `colour`, `center` → `centre`); everything else passes through unchanged
+
+### Fixed
+
+- `--dry-run` no longer crashes for a locale that has no existing `.po` file (it now reads the `.pot` as the basis for what would be translated)
+
 ## [1.2.2] - 2026-05-22
 
 ### Fixed

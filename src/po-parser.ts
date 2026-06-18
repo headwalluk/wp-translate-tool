@@ -136,6 +136,12 @@ export function unsanitize(text: string): string {
   return out;
 }
 
+// Set an entry's translation to its own source string (identity passthrough).
+// msgid is already in escaped PO form, so it can be reused verbatim as msgstr.
+export function setIdentityTranslation(entry: PoEntry): void {
+  if (entry.msgid !== null) entry.newTranslation = `msgstr "${entry.msgid}"`;
+}
+
 export function getUntranslated(entries: PoEntry[]): { standard: PoEntry[]; contextual: PoEntry[] } {
   const needs = entries.filter(e => e.msgid && e.msgid !== '' && e.msgstr === '');
   return {

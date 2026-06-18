@@ -3,8 +3,10 @@ import { basename, join, resolve } from 'path';
 import { loadConfig } from './config.js';
 import { validateLocales, checkDependencies } from './validation.js';
 import { findOrCreatePot, detectLocales } from './pot.js';
-import { parsePo, injectLanguageHeader, applyTranslations, writePo, getUntranslated } from './po-parser.js';
+import { parsePo, injectLanguageHeader, applyTranslations, writePo, getUntranslated, setIdentityTranslation, sanitize, unsanitize } from './po-parser.js';
 import { translateBatch, translateContextual, checkUsage } from './deepl.js';
+import { englishTarget, toBritish } from './english.js';
+import { isProtectedAcronym } from './acronyms.js';
 import { updatePo, makeMo } from './wp-cli.js';
 import { checkForUpdate, getVersion } from './update.js';
 
@@ -73,12 +75,53 @@ async function processLocale(
     return 0;
   }
 
-  console.log(`   ${locale}: Found ${standard.length} standard and ${contextual.length} contextual strings.`);
+  // English targets never go to DeepL (en->en is a no-op there). en/en_US pass
+  // through verbatim; en_GB/en_AU/... get local American->British conversion.
+  const mode = englishTarget(locale);
+
+  if (mode !== 'none') {
+    const all = [...standard, ...contextual];
+    let converted = 0;
+    if (mode === 'gb-convert') {
+      for (const e of all) {
+        const brit = toBritish(unsanitize(e.msgid!));
+        if (brit !== unsanitize(e.msgid!)) {
+          e.newTranslation = `msgstr "${sanitize(brit)}"`;
+          converted++;
+        } else {
+          setIdentityTranslation(e);
+        }
+      }
+      console.log(`   ${locale}: ${all.length - converted} passed through, ${converted} localised to British spelling (no API call).`);
+    } else {
+      for (const e of all) setIdentityTranslation(e);
+      console.log(`   ${locale}: ${all.length} string(s) — passthrough (English source dialect, no API call).`);
+    }
+
+    if (dryRun) return total;
+
+    const count = applyTranslations(entries);
+    writePo(poFile, entries);
+    console.log(`   ${locale}: Updated ${count} strings.`);
+    return count;
+  }
+
+  // Keep protected acronyms verbatim instead of letting DeepL mangle them.
+  const all = [...standard, ...contextual];
+  const acronyms = new Set(all.filter(e => isProtectedAcronym(unsanitize(e.msgid!))));
+  const apiStandard = standard.filter(e => !acronyms.has(e));
+  const apiContextual = contextual.filter(e => !acronyms.has(e));
+
+  console.log(
+    `   ${locale}: Found ${standard.length} standard and ${contextual.length} contextual strings.` +
+    (acronyms.size > 0 ? ` (${acronyms.size} acronym(s) kept verbatim)` : ''),
+  );
 
   if (dryRun) return total;
 
-  if (standard.length > 0) await translateBatch(standard, locale, authKey);
-  if (contextual.length > 0) await translateContextual(contextual, locale, authKey);
+  for (const e of acronyms) setIdentityTranslation(e);
+  if (apiStandard.length > 0) await translateBatch(apiStandard, locale, authKey);
+  if (apiContextual.length > 0) await translateContextual(apiContextual, locale, authKey);
 
   const count = applyTranslations(entries);
   writePo(poFile, entries);
@@ -134,17 +177,25 @@ async function main() {
   for (const locale of locales) {
     const poFile = join(pluginPath, 'languages', `${domain}-${locale}.po`);
 
+    const poExists = existsSync(poFile);
+
     if (!dryRun) {
-      if (existsSync(poFile)) {
+      if (poExists) {
         console.log(`>> Syncing ${locale} (keeping existing)...`);
         updatePo(potFile, poFile);
       } else {
         console.log(`>> Creating ${locale} (fresh)...`);
         copyFileSync(potFile, poFile);
       }
+    } else if (!poExists) {
+      console.log(`>> Would create ${locale} (fresh)...`);
     }
 
-    const count = await processLocale(poFile, locale, deeplAuthKey, dryRun);
+    // In dry-run a fresh locale's .po is not created, so read the POT as the
+    // basis for what would be translated. Outside dry-run the .po always exists
+    // here (just created/synced above) and must be the file we read and write.
+    const sourceFile = dryRun && !poExists ? potFile : poFile;
+    const count = await processLocale(sourceFile, locale, deeplAuthKey, dryRun);
     totalStrings += count;
     if (count > 0) localesProcessed++;
   }

@@ -22,6 +22,17 @@ If you omit the locales argument, the tool will auto-detect them from existing `
 4. Writes translations back to the `.po` files
 5. Compiles all `.po` files into binary `.mo` files
 
+### English locales
+
+English targets are never sent to DeepL — machine-translating en→en is a no-op that only risks corrupting short strings (e.g. `TLS` becoming "The latest security standards"). They are handled locally instead, with no API calls:
+
+- **`en` / `en_US`** — strings pass through unchanged (the source is already the desired dialect).
+- **`en_GB`, `en_AU`, `en_NZ`, …** — American spellings are converted to British-style English (`color` → `colour`, `organize` → `organise`); everything else passes through unchanged.
+
+### Technical acronyms
+
+For non-English locales, strings whose entire value is a common technical acronym (`TLS`, `API`, `TOTP`, `SMTP`, `URL`, `ID`, `UTC`, …) are kept verbatim rather than sent to DeepL, which tends to mangle context-free acronyms. Compound strings (e.g. `Enable TLS`) are still translated normally.
+
 ---
 
 ## For Users
