@@ -1,5 +1,6 @@
-import { existsSync, copyFileSync } from 'fs';
+import { existsSync, copyFileSync, readFileSync, writeFileSync } from 'fs';
 import { basename, join, resolve } from 'path';
+import { createInterface } from 'readline';
 import { loadConfig } from './config.js';
 import { validateLocales, checkDependencies } from './validation.js';
 import { findOrCreatePot, detectLocales } from './pot.js';
@@ -9,6 +10,7 @@ import { englishTarget, toBritish } from './english.js';
 import { isProtectedAcronym } from './acronyms.js';
 import { updatePo, makeMo } from './wp-cli.js';
 import { checkForUpdate, getVersion } from './update.js';
+import { findAgentFiles, detectDomain, blockStatus, applyBlock, BlockStatus } from './instructions.js';
 
 const DEFAULT_LOCALES = 'en_GB,fr_FR,de_DE,es_ES,nl_NL,it_IT,pl_PL,el_GR';
 
@@ -19,10 +21,14 @@ function printHelp(): void {
   console.log(`Usage:`);
   console.log(`  ${bin} <plugin-path> [locales]    Translate a plugin`);
   console.log(`  ${bin} <plugin-path> --dry-run     Show what would be translated`);
+  console.log(`  ${bin} <plugin-path> --check-instructions   Check agent-instructions block`);
+  console.log(`  ${bin} <plugin-path> --sync-instructions    Inject/update agent-instructions block`);
   console.log(`  ${bin} --usage                     Show DeepL API quota`);
   console.log(`  ${bin} --check-update              Check for a newer release`);
   console.log(`  ${bin} --version, -v               Print version`);
   console.log(`  ${bin} --help, -h                  Show this help\n`);
+  console.log(`Options:`);
+  console.log(`  --yes, -y     Skip the confirmation prompt for --sync-instructions\n`);
   console.log(`Arguments:`);
   console.log(`  plugin-path   Path to the WordPress plugin directory`);
   console.log(`  locales       Comma-separated list (e.g., en_GB,fr_FR,de_DE)`);
@@ -129,6 +135,82 @@ async function processLocale(
   return count;
 }
 
+function confirm(question: string): Promise<boolean> {
+  const rl = createInterface({ input: process.stdin, output: process.stdout });
+  return new Promise(res => rl.question(question, ans => {
+    rl.close();
+    res(/^y(es)?$/i.test(ans.trim()));
+  }));
+}
+
+// Handle --check-instructions / --sync-instructions. Returns the process exit code.
+async function runInstructions(pluginPath: string, opts: { sync: boolean; assumeYes: boolean }): Promise<number> {
+  const { sync, assumeYes } = opts;
+
+  if (!existsSync(pluginPath)) {
+    console.error(`Error: plugin path not found: ${pluginPath}`);
+    return 1;
+  }
+
+  const looked = 'AGENTS.md, CLAUDE.md, .github/copilot-instructions.md, GEMINI.md';
+  const { target, others } = findAgentFiles(pluginPath);
+
+  if (!target) {
+    console.log(`No agent-instructions file found (looked for: ${looked}).`);
+    console.log(`Nothing to update — wp-translate only updates existing files.`);
+    return 0;
+  }
+
+  const domain = detectDomain(pluginPath);
+  const filePath = join(pluginPath, target);
+  const content = readFileSync(filePath, 'utf8');
+  const status = blockStatus(content, domain);
+
+  if (others.length > 0) {
+    console.log(`Note: also present, left untouched: ${others.join(', ')}`);
+  }
+
+  const labels: Record<BlockStatus, string> = {
+    'current': 'up to date',
+    'stale': 'out of date',
+    'missing-block': 'no wp-translate block',
+    'drift': 'block was hand-edited',
+    'newer': 'block is newer than this tool',
+  };
+  console.log(`${target} (text domain: ${domain}): ${labels[status]}.`);
+
+  if (!sync) {
+    // check mode: exit 2 if --sync would change something, else 0.
+    const actionable = status === 'stale' || status === 'missing-block' || status === 'drift';
+    return actionable ? 2 : 0;
+  }
+
+  if (status === 'current') {
+    console.log(`Already current — no change.`);
+    return 0;
+  }
+  if (status === 'newer') {
+    console.log(`Leaving as-is. Upgrade wp-translate to manage this block.`);
+    return 0;
+  }
+  if (status === 'drift') {
+    console.log(`Warning: the block was hand-edited; --sync will overwrite it.`);
+  }
+
+  if (process.stdout.isTTY && !assumeYes) {
+    const verb = status === 'missing-block' ? 'Add' : 'Update';
+    const ok = await confirm(`${verb} the wp-translate block in ${target}? [y/N] `);
+    if (!ok) {
+      console.log(`Aborted. No changes made.`);
+      return 0;
+    }
+  }
+
+  writeFileSync(filePath, applyBlock(content, domain));
+  console.log(`${status === 'missing-block' ? 'Added' : 'Updated'} wp-translate block in ${target}.`);
+  return 0;
+}
+
 async function main() {
   const args = process.argv.slice(2);
 
@@ -151,6 +233,18 @@ async function main() {
     const { deeplAuthKey } = loadConfig();
     await checkUsage(deeplAuthKey);
     return;
+  }
+
+  if (args.includes('--check-instructions') || args.includes('--sync-instructions')) {
+    const sync = args.includes('--sync-instructions');
+    const assumeYes = args.includes('--yes') || args.includes('-y');
+    const positional = args.filter(a => !a.startsWith('-'));
+    const pluginPath = positional[0] ? resolve(positional[0]) : '';
+    if (!pluginPath) {
+      console.error('Error: a plugin path is required for instruction sync.');
+      process.exit(1);
+    }
+    process.exit(await runInstructions(pluginPath, { sync, assumeYes }));
   }
 
   const dryRun = args.includes('--dry-run');

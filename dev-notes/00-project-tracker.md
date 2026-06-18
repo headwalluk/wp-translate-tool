@@ -1,9 +1,9 @@
 # wp-translate-tool — Project Tracker
 
-**Version:** 1.4.0 (unreleased — M1 & M2 verified, pending commit/tag)
+**Version:** 1.5.0 (unreleased — M1–M3 verified, pending commit/tag)
 **Last Updated:** 18 June 2026
-**Current Phase:** Milestones 1 & 2 complete & verified; Milestone 3 (Agent-Instruction Sync) next
-**Overall Progress:** ~55% (M1 & M2 done; M3–M4 not started)
+**Current Phase:** Milestones 1–3 complete & verified; Milestone 4 (translator-comment context) next
+**Overall Progress:** ~80% (M1–M3 done; M4 not started)
 
 ---
 
@@ -43,9 +43,9 @@ errors in every locale, including en-GB. The strategy is **two-pronged**:
 - [x] **Acronym denylist contents + matching semantics** (Milestone 2) —
   RESOLVED: whole-`msgid` exact, case-sensitive; curated list in `src/acronyms.ts`
   (extend as needed).
-- [ ] **Sign off the canonical instruction-block wording** (Milestone 3) before
-  it ships embedded in the tool — it becomes the contract authored into client
-  plugin repos.
+- [x] **Sign off the canonical instruction-block wording** (Milestone 3) —
+  RESOLVED 18 June 2026: approved with text-domain templating; canonical body now
+  lives in `src/instructions.ts`.
 - [ ] **Decide the `_x()` retrofit pass for `heads-up-mailer`** — the in-place
   `.po`/`.mo` hand-fixes will be overwritten on next regen until the source
   carries `_x()` context (tracked separately in the plugin repo, but the trigger
@@ -192,11 +192,13 @@ acronyms verbatim there.
 
 ---
 
-### Milestone 3: Agent-Instruction Sync Subcommand 📋
+### Milestone 3: Agent-Instruction Sync Subcommand ✅
 
-**Status:** Not Started
+**Status:** Complete — pending commit/tag/push
 **Priority:** Medium
 **Target:** v1.5.0
+**Started:** 18 June 2026
+**Completed:** 18 June 2026
 
 **Goal:** When invoked against a plugin directory, detect a recognised AI-agent
 instructions file and offer to inject / update a versioned block that teaches the
@@ -242,45 +244,45 @@ clear message.
 - `--check-instructions`: `0` = block present and current; `2` = missing or stale
 - `--sync-instructions`: applies the change (TTY confirm; `--yes`/non-TTY applies silently)
 
+**Decisions (signed off 18 June 2026):**
+- **Text-domain templating** — the canonical body uses `__TEXTDOMAIN__`, replaced
+  with the plugin's real domain on injection (avoids the literal leaking into
+  `.po`/`.mo`; the stored hash covers the rendered body so drift detection still works).
+- **Clean heading** — version lives only in the marker (`v=1.0.0`); not duplicated
+  in the human heading.
+- **No M4 forward-reference** — block describes current behaviour only.
+- **Exit-code semantics**: `--check` exits `2` when a sync would change the file
+  (`stale` / `missing-block` / `drift`), else `0`. A missing *agent file* is not
+  actionable (we don't create files) → exit `0`. `newer` block → `0`, left alone.
+- **Domain detection without wp-cli**: existing `.pot` → main-file `Text Domain`
+  header → directory slug (so `--check-instructions` needs neither wp-cli nor a key).
+
 #### Implementation Checklist
 
-**Phase 1: Canonical block content**
-- [ ] Author the block body: `_x()` authoring guidance (with `Sent`/`Folder`
-      worked examples from the doc) + short `wp-translate` invocation appendix
-- [ ] Frame as "translation authoring conventions for this plugin", not tool advertising
-- [ ] Define the block's own semver constant (independent of the tool version), start at `1.0.0`
-- [ ] Get user sign-off on wording (Active TODO)
+- [x] Canonical body + `BLOCK_VERSION = '1.0.0'` in `src/instructions.ts`
+      (signed-off wording; draft was `dev-notes/m3-instruction-block-draft.md`)
+- [x] `findAgentFiles()` precedence (AGENTS → CLAUDE → copilot → GEMINI), returns
+      target + others
+- [x] Marker parser + `sha256` + `semverCompare` + `blockStatus()`
+      (`current`|`stale`|`newer`|`missing-block`|`drift`)
+- [x] `applyBlock()` — surgical inject/replace; nothing outside markers touched
+- [x] `detectDomain()` (no wp-cli)
+- [x] CLI: `--check-instructions` / `--sync-instructions` / `--yes` / `-y`, TTY
+      confirm, exit codes; handled before config/wp-cli so they need neither
+- [x] `printHelp()` + README + CHANGELOG + bump to v1.5.0 + build
+- [ ] Commit, tag `v1.5.0`, push main + tag — *user-triggered*
 
-**Phase 2: New `src/instructions.ts` module**
-- [ ] `findAgentFile(dir)` — apply precedence, return highest-precedence existing file (or null)
-- [ ] Marker parser — locate the `wp-translate:begin … :end` region; extract `v=` and `hash=`
-- [ ] `sha256` of the on-disk body; drift detection (declared `v=` body hash mismatch → warn)
-- [ ] Semver compare (older block `v=` → "stale"); reuse/keep dependency-free
-- [ ] `renderStatus()` → `present-current` | `stale` | `missing-block` | `no-file`
-- [ ] `applyBlock()` — inject (no block) or replace (existing block) surgically
-
-**Phase 3: CLI wiring (`src/index.ts`)**
-- [ ] Parse `--check-instructions` and `--sync-instructions` (both take the plugin path)
-- [ ] Add `--yes` flag and TTY detection (`process.stdout.isTTY`) for the confirm prompt
-- [ ] `--check-instructions`: print status, exit `0`/`2`, never write
-- [ ] `--sync-instructions`: confirm on TTY (skip with `--yes`/non-TTY), then write
-- [ ] Drift guard: warn `block was hand-edited; --sync will overwrite` before replacing
-- [ ] No-file case: `no agent-instructions file found (looked for: …); nothing to update`
-
-**Phase 4: Docs**
-- [ ] Update `printHelp()` with the two new verbs and `--yes`
-- [ ] README: document the subcommands, precedence, exit codes, "existing files only" policy
-- [ ] CHANGELOG entry, bump to v1.5.0
-
-**Phase 5: Testing**
-- [ ] No agent file → correct no-op + message + exit codes
-- [ ] Agent file without block → `--check` reports missing (exit 2); `--sync` injects
-- [ ] Agent file with current block → `--check` exit 0; `--sync` no change
-- [ ] Agent file with older `v=` → `--check` reports stale (exit 2); `--sync` updates in place
-- [ ] Hand-edited block → drift warning, content outside markers preserved byte-for-byte
-- [ ] Multiple agent files → only highest-precedence updated; others reported untouched
-- [ ] Non-TTY / `--yes` applies without prompting; translate path unaffected
-- [ ] Build, tag, push
+**Verification (18 June 2026, all pass):**
+- No agent file → message, exit 0 (check & sync).
+- Existing file, no block → check exit 2; sync injects (exit 0); re-check exit 0.
+- Domain substitution: real domain present, zero literal `__TEXTDOMAIN__`; PRE/POST
+  sentinels around the block preserved byte-for-byte through inject and replace.
+- Stale (`v=0.9.0`) → check exit 2; sync updates to 1.0.0.
+- Drift (hand-edited body) → check exit 2; sync warns then overwrites.
+- Newer (`v=2.0.0`) → check exit 0; sync leaves as-is.
+- Precedence: AGENTS.md updated, CLAUDE.md noted & untouched.
+- Real plugin copy (`quick-2fa`): domain `quick-2fa` via `.pot`, CLAUDE.md target,
+  `.github/copilot-instructions.md` noted; idempotent re-check.
 
 ---
 

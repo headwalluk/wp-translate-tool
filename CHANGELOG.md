@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.5.0] - 2026-06-18
+
+### Added
+
+- `--check-instructions` and `--sync-instructions` subcommands. wp-translate can maintain a versioned, marker-delimited block of translation conventions (how to write `_x()` context, use placeholders, run the tool) in a plugin's AI-agent instructions file:
+  - Updates an existing `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, or `GEMINI.md` (in that precedence order); never creates a file
+  - The plugin's real text domain is substituted into the block's examples
+  - `--check-instructions` exits `2` when a sync would change the file (missing, stale, or hand-edited block), `0` when up to date
+  - `--sync-instructions` prompts before writing on a TTY; `--yes` / non-interactive applies without prompting. A hand-edited block is reported before being overwritten. Content outside the markers is never touched
+
 ## [1.4.0] - 2026-06-18
 
 ### Added

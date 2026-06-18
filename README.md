@@ -33,6 +33,18 @@ English targets are never sent to DeepL — machine-translating en→en is a no-
 
 For non-English locales, strings whose entire value is a common technical acronym (`TLS`, `API`, `TOTP`, `SMTP`, `URL`, `ID`, `UTC`, …) are kept verbatim rather than sent to DeepL, which tends to mangle context-free acronyms. Compound strings (e.g. `Enable TLS`) are still translated normally.
 
+### Agent instructions
+
+wp-translate can maintain a short, versioned block of translation conventions in a plugin's AI-agent instructions file — guidance for coding agents on writing `_x()` context, using placeholders, and running the tool. This helps machine translation at the source.
+
+```bash
+wp-translate ./my-plugin --check-instructions   # report status (exit 2 if a sync would help)
+wp-translate ./my-plugin --sync-instructions    # inject/update the block (--yes to skip the prompt)
+```
+
+- **Existing files only** — it updates an existing `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, or `GEMINI.md` (in that precedence order), and never creates one.
+- The block is delimited by `wp-translate:begin/end` markers; nothing outside them is touched. It carries a version, so `--check-instructions` can tell you when an update is available, and a hand-edited block is detected and reported before being overwritten.
+
 ---
 
 ## For Users
@@ -103,7 +115,7 @@ wp-translate --help
 |---|---|
 | `0` | Success / up to date |
 | `1` | Error |
-| `2` | Update available (`--check-update` only) |
+| `2` | Action available (`--check-update`: a release; `--check-instructions`: a sync would change the file) |
 
 This makes `--check-update` scriptable:
 
