@@ -1,9 +1,9 @@
 # wp-translate-tool — Project Tracker
 
-**Version:** 1.5.0 (unreleased — M1–M3 verified, pending commit/tag)
+**Version:** 1.6.0 (unreleased — M1–M4 verified, pending final release)
 **Last Updated:** 18 June 2026
-**Current Phase:** Milestones 1–3 complete & verified; Milestone 4 (translator-comment context) next
-**Overall Progress:** ~80% (M1–M3 done; M4 not started)
+**Current Phase:** All milestones (1–4) complete & verified; ready for final release
+**Overall Progress:** 100% of planned milestones (pending commit/tag/release)
 
 ---
 
@@ -286,11 +286,13 @@ clear message.
 
 ---
 
-### Milestone 4: Translator-Comment (`#.`) as DeepL Context 📋
+### Milestone 4: Translator-Comment (`#.`) as DeepL Context ✅
 
-**Status:** Not Started
+**Status:** Complete — pending commit/tag/push
 **Priority:** Low
-**Target:** TBC (v1.6.0 candidate)
+**Target:** v1.6.0
+**Started:** 18 June 2026
+**Completed:** 18 June 2026
 
 **Goal:** Teach the parser to read gettext extracted comments (`#.`, produced by
 `/* translators: … */` in source) and feed them to DeepL's `context` parameter
@@ -305,15 +307,28 @@ a higher-quality context source than the doc's option C (file-path references).
 - Bridges the two source-side mechanisms: `_x()` (msgctxt, Milestone 3) and
   `/* translators: */` (extracted comments, this milestone).
 
+**Design note:** only `#. translators:` comments are captured as context.
+Auto-generated header `#.` comments ("Plugin Name of the plugin", etc.) are
+ignored, so plugin-header strings aren't needlessly pushed onto the slower
+per-entry contextual path.
+
 #### Implementation Checklist
 
-- [ ] Add an `extractedComments` (`#.`) field to `PoEntry` and parse it in `po-parser.ts`
-- [ ] Route entries with extracted comments but no `msgctxt` through the contextual path,
-      using the joined comment text as the DeepL `context`
-- [ ] Preserve precedence: `msgctxt` wins over extracted comment when both present
-- [ ] Verify round-trip is still lossless (raw lines preserved)
-- [ ] Manual test: a `/* translators: */`-annotated short string disambiguates correctly
-- [ ] CHANGELOG, version bump, build, tag, push
+- [x] `extractedComments` field on `PoEntry`; parse `#. translators:` in `po-parser.ts`
+      (strips the `translators:` label; other `#.` comments ignored)
+- [x] `getUntranslated()` routes entries with extracted comments through contextual
+- [x] `translateContextual()` uses `msgctxt ?? extractedComments` (msgctxt precedence)
+- [x] Lossless round-trip verified (`#.`/`#:` lines preserved in output `.po`)
+- [x] CHANGELOG + README + bump to v1.6.0 + build
+- [ ] Commit, tag `v1.6.0`, push main + tag — *user-triggered*
+
+**Verification (18 June 2026):**
+- DeepL probe confirmed context flips output (de): `Folder` → `Broschüre`→`Ordner`,
+  `Sent` → `Spät`→`Gesendet`.
+- End-to-end (`quick-2fa` de_DE): `/* translators: */`-annotated `Folder`→`Ordner`,
+  `Sent`→`Gesendet`; un-annotated `Account`→`Konto`. Contextual count reflects
+  only real translator comments (14, not the 19 that included header `#.` lines).
+- Round-trip lossless; `.mo` compiled.
 
 ---
 

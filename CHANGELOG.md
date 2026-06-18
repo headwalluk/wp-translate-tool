@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.6.0] - 2026-06-18
+
+### Added
+
+- `/* translators: */` comments are now used as DeepL context. The parser reads gettext `#. translators:` extracted comments and, for strings without an `_x()` `msgctxt`, sends the note as DeepL's `context` parameter to disambiguate. This fixes context-free mistranslations of polysemous words (e.g. with a `translators:` note, `Folder` → `Ordner` instead of `Broschüre`, `Sent` → `Gesendet` instead of `Spät` in German). `msgctxt` still takes precedence when both are present
+
 ## [1.5.0] - 2026-06-18
 
 ### Added

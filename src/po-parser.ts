@@ -3,6 +3,7 @@ import { readFileSync, writeFileSync } from 'fs';
 export interface PoEntry {
   raw: string[];
   msgctxt: string | null;
+  extractedComments: string | null;
   msgid: string | null;
   msgstr: string | null;
   msgstrIndex: number;
@@ -10,7 +11,7 @@ export interface PoEntry {
 }
 
 function createEntry(): PoEntry {
-  return { raw: [], msgctxt: null, msgid: null, msgstr: null, msgstrIndex: -1, newTranslation: null };
+  return { raw: [], msgctxt: null, extractedComments: null, msgid: null, msgstr: null, msgstrIndex: -1, newTranslation: null };
 }
 
 export function parsePo(filePath: string): PoEntry[] {
@@ -35,6 +36,19 @@ export function parsePo(filePath: string): PoEntry[] {
       pushEntry();
       state = 'NONE';
       continue;
+    }
+
+    // Translator comments (#. translators: ...) from `/* translators: */` in
+    // source — used as DeepL context. Other `#.` comments (auto-generated header
+    // metadata like "Plugin Name of the plugin") are intentionally ignored.
+    if (line.startsWith('#.')) {
+      const match = line.match(/^#\.\s*translators:\s*(.+)$/i);
+      if (match) {
+        const note = match[1].trim();
+        current.extractedComments = current.extractedComments
+          ? `${current.extractedComments} ${note}`
+          : note;
+      }
     }
 
     // msgctxt
@@ -144,8 +158,10 @@ export function setIdentityTranslation(entry: PoEntry): void {
 
 export function getUntranslated(entries: PoEntry[]): { standard: PoEntry[]; contextual: PoEntry[] } {
   const needs = entries.filter(e => e.msgid && e.msgid !== '' && e.msgstr === '');
+  // Contextual = anything that carries disambiguating context for DeepL: a
+  // msgctxt (_x()) or an extracted translator comment (#.).
   return {
-    standard: needs.filter(e => !e.msgctxt),
-    contextual: needs.filter(e => e.msgctxt),
+    standard: needs.filter(e => !e.msgctxt && !e.extractedComments),
+    contextual: needs.filter(e => e.msgctxt || e.extractedComments),
   };
 }

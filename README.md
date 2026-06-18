@@ -18,7 +18,7 @@ If you omit the locales argument, the tool will auto-detect them from existing `
 
 1. Regenerates the `.pot` template from the plugin source (ensuring new strings are always picked up)
 2. For each locale, syncs or creates a `.po` file from the template
-3. Identifies untranslated strings and sends them to DeepL (batched for efficiency; contextual strings are translated individually so DeepL can use the `msgctxt` metadata)
+3. Identifies untranslated strings and sends them to DeepL (batched for efficiency; strings with context — an `_x()` `msgctxt` or a `/* translators: */` comment — are translated individually so DeepL can use that context to disambiguate)
 4. Writes translations back to the `.po` files
 5. Compiles all `.po` files into binary `.mo` files
 

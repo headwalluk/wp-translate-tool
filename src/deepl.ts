@@ -89,11 +89,14 @@ export async function translateContextual(
     if (entries.length > 1) {
       process.stdout.write(`   Translating contextual ${i + 1}/${entries.length}...\r`);
     }
-    const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', {
+    // msgctxt (_x()) takes precedence over an extracted translator comment (#.).
+    const context = item.msgctxt ?? item.extractedComments;
+    const body: Record<string, unknown> = {
       text: [unsanitize(item.msgid!)],
       target_lang: deepLLang,
-      context: item.msgctxt ? unsanitize(item.msgctxt) : item.msgctxt,
-    });
+    };
+    if (context) body.context = unsanitize(context);
+    const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', body);
     if (result.translations.length > 0) {
       item.newTranslation = `msgstr "${sanitize(result.translations[0].text)}"`;
     }
