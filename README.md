@@ -63,6 +63,18 @@ Create `~/.config/deepl.env` with your API key:
 export DEEPL_AUTH_KEY='your-api-key-here'
 ```
 
+### Rate limiting
+
+To stay under DeepL's rate limit (HTTP 429), wp-translate pauses briefly between
+translate requests and automatically retries rate-limited or transient errors
+with exponential backoff, honouring the server's `Retry-After` header. Two
+environment variables tune this:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `WP_TRANSLATE_API_DELAY_MS` | `500` | Pause between consecutive requests, in ms. Set `0` to disable (e.g. on a paid plan). |
+| `WP_TRANSLATE_MAX_RETRIES` | `5` | Retry attempts for 429/5xx/connection errors. Set `0` to disable retrying. |
+
 ### Installation
 
 Download the latest built script and place it in your PATH:

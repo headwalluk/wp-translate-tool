@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.0] - 2026-06-19
+
+### Added
+
+- Rate-limit handling for DeepL calls. A small pause is now inserted between consecutive translate requests, and rate-limited (`429`) or transient server errors (`5xx`) plus connection errors are retried automatically with exponential backoff, honouring the server's `Retry-After` header. Two environment variables tune the behaviour: `WP_TRANSLATE_API_DELAY_MS` (inter-request pause, default `500`, `0` to disable) and `WP_TRANSLATE_MAX_RETRIES` (retry attempts, default `5`, `0` to disable). Non-retryable responses (e.g. `403`) still fail fast
+
 ## [1.7.0] - 2026-06-19
 
 ### Added
