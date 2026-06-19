@@ -35,7 +35,7 @@ For non-English locales, strings whose entire value is a common technical acrony
 
 ### Agent instructions
 
-wp-translate can maintain a short, versioned block of translation conventions in a plugin's AI-agent instructions file — guidance for coding agents on writing `_x()` context, using placeholders, and running the tool. This helps machine translation at the source.
+wp-translate can maintain a short, versioned block of translation conventions in a plugin's AI-agent instructions file — guidance for coding agents on writing `_x()` context, using placeholders, localising dates via `$wp_locale`, and running the tool. This helps machine translation at the source.
 
 ```bash
 wp-translate ./my-plugin --check-instructions   # report status (exit 2 if a sync would help)

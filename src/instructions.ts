@@ -14,7 +14,7 @@ import { createHash } from 'crypto';
 
 // The block body's own version, independent of the tool version. Bump when the
 // canonical guidance below changes so synced plugins can detect a stale block.
-export const BLOCK_VERSION = '1.0.0';
+export const BLOCK_VERSION = '1.1.0';
 
 const BEGIN_PREFIX = '<!-- wp-translate:begin ';
 const END_MARKER = '<!-- wp-translate:end -->';
@@ -67,7 +67,25 @@ verbatim automatically. If you introduce an unusual acronym or product name that
 must not be translated, keep it as its own standalone string so it is recognised,
 or ask the maintainer to add it to the tool's acronym list.
 
-### 4. English source dialect
+### 4. Don't translate dates — let WordPress localise them
+
+Never add month or day-of-week names (full or abbreviated) as translatable
+strings. DeepL frequently mistranslates short forms like \`Mon\`, \`Tue\`, \`Jan\`,
+\`Feb\` even with context hints. WordPress already ships locale-aware names — use
+\`$wp_locale\`:
+
+\`\`\`php
+global $wp_locale;
+$wp_locale->get_month( $month_number );        // "January" (1-based)
+$wp_locale->get_month_abbrev( $month_name );   // "Jan"
+$wp_locale->get_weekday( $weekday_number );     // "Monday" (0 = Sunday)
+$wp_locale->get_weekday_abbrev( $weekday_name ); // "Mon"
+\`\`\`
+
+For formatted dates, prefer \`wp_date()\` / \`date_i18n()\`, which localise month and
+day names automatically.
+
+### 5. English source dialect
 
 Write source strings in standard English. wp-translate handles English targets
 locally (no DeepL): \`en\`/\`en_US\` use the source as-is, and \`en_GB\`/\`en_AU\`/… get

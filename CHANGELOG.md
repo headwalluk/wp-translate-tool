@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.7.0] - 2026-06-19
+
+### Added
+
+- The synced agent-instructions block now advises against adding month and day-of-week names (full or abbreviated) as translatable strings — DeepL frequently mistranslates short forms like `Mon`, `Tue`, `Jan` even with context hints — and points to WordPress's locale-aware `$wp_locale` helpers (`get_month`, `get_month_abbrev`, `get_weekday`, `get_weekday_abbrev`) plus `wp_date()` / `date_i18n()`. The block version is bumped to `1.1.0`, so `--check-instructions` reports already-synced plugins as stale until re-synced
+
 ## [1.6.1] - 2026-06-18
 
 ### Added
