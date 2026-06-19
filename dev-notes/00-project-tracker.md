@@ -1,7 +1,7 @@
 # wp-translate-tool — Project Tracker
 
-**Version:** 1.6.1 (released)
-**Last Updated:** 18 June 2026
+**Version:** 1.8.0 (released)
+**Last Updated:** 19 June 2026
 **Current Phase:** All milestones (1–4) complete, released, and dogfooded on `easy-logo-carousel`
 **Overall Progress:** 100% of planned milestones
 
@@ -10,6 +10,17 @@
   while dogfooding `easy-logo-carousel`). Confirmed: manual poedit fixes are never
   overwritten on re-run (only empty `msgstr` entries are filled; `update-po`
   preserves existing translations).
+- v1.7.0 — agent-instruction block now advises against adding month/day-of-week
+  names as translatable strings (DeepL mis-translates short forms like `Mon`,
+  `Jan` even with hints) and points to WordPress's `$wp_locale` helpers
+  (`get_month`, `get_month_abbrev`, `get_weekday`, `get_weekday_abbrev`) plus
+  `wp_date()` / `date_i18n()`. `BLOCK_VERSION` bumped 1.0.0 → 1.1.0, so
+  already-synced plugins report stale until re-synced.
+- v1.8.0 — DeepL rate-limit handling. Inter-request pause plus automatic retry
+  with exponential backoff on 429/5xx/connection errors, honouring `Retry-After`.
+  Tunable via `WP_TRANSLATE_API_DELAY_MS` (default 500, 0 disables) and
+  `WP_TRANSLATE_MAX_RETRIES` (default 5, 0 disables). Non-retryable statuses
+  (e.g. 403) still fail fast.
 
 ---
 
