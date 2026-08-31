@@ -596,9 +596,19 @@ rediscovered:
 1. **`heads-up-mailer` in-place fixes are fragile** — the hand-corrected
    `.po`/`.mo` files will be overwritten on the next regen until the plugin
    source carries `_x()` context (Milestones 1–3 are the durable fix).
-2. **No automated tests** — the project is verified manually. As CLI surface
-   grows (Milestone 3 adds parsing/marker/semver logic), consider a lightweight
-   test harness for `instructions.ts` and `po-parser.ts` at minimum.
+2. **Test coverage is partial** — a harness now exists (`npm test`, added
+   31 August 2026): a bash runner over `.po` fixtures checking parser output
+   against golden files and byte-for-byte round-tripping. It paid for itself
+   immediately, catching the missing trailing newline in `writePo()` and making
+   the Milestone 5 parser rewrite safe to attempt.
+
+   **Still uncovered:** `instructions.ts` (marker parsing, semver, `blockStatus`)
+   and the `index.ts` orchestration — notably the header-injection-then-merge
+   sequence added in Milestone 5, which is where a future sequencing bug would
+   hide. The synthetic plugin used to verify v1.9.0 end-to-end is not committed;
+   promoting it to a fixture would close the orchestration gap, but needs wp-cli
+   and a DeepL key available, so it would have to skip gracefully when they are
+   not.
 
 ---
 
