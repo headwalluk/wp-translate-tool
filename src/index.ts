@@ -75,6 +75,14 @@ async function processLocale(
   const { standard, contextual } = getUntranslated(entries);
   const total = standard.length + contextual.length;
 
+  // _n() plurals are not yet translatable. Report them rather than leaving the
+  // gap silent — an untranslated plural is otherwise invisible in the summary.
+  const pluralCount = entries.filter(e => e.isPlural).length;
+  if (pluralCount > 0) {
+    const noun = pluralCount === 1 ? 'entry' : 'entries';
+    console.log(`   ${locale}: ${pluralCount} plural ${noun} skipped (not yet supported).`);
+  }
+
   if (total === 0) {
     console.log(`   ${locale}: Nothing new to translate.`);
     if (!dryRun) writePo(poFile, entries);

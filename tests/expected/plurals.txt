@@ -1,0 +1,37 @@
+== ENTRIES ==
+[0]
+  msgctxt     : null
+  comments    : null
+  msgid       : ""
+  msgstr      : "Project-Id-Version: fixture 1.0\\nMIME-Version: 1.0\\nContent-Type: text/plain; charset=UTF-8\\n"
+  msgstrIndex : 1
+  isPlural    : false
+  rawLines    : 5
+[1]
+  msgctxt     : null
+  comments    : null
+  msgid       : "%d profile"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  rawLines    : 5
+[2]
+  msgctxt     : null
+  comments    : null
+  msgid       : "SINGULAR-FIRST-HALF singular-second-halfPLURAL-FIRST-HALF plural-second-halfTRANSLATED-SLOT0-FIRST translated-slot0-second"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  rawLines    : 11
+[3]
+  msgctxt     : null
+  comments    : null
+  msgid       : "Last run outcome"
+  msgstr      : ""
+  msgstrIndex : 2
+  isPlural    : false
+  rawLines    : 3
+== SELECTION ==
+standard   : 1
+  "Last run outcome"
+contextual : 0

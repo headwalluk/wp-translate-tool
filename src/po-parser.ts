@@ -7,11 +7,15 @@ export interface PoEntry {
   msgid: string | null;
   msgstr: string | null;
   msgstrIndex: number;
+  // True for _n() entries (those carrying msgid_plural). Detection only — the
+  // translate path does not yet handle plurals, so these are reported and
+  // skipped. See dev-notes/plural-strings-untranslated.md.
+  isPlural: boolean;
   newTranslation: string | null;
 }
 
 function createEntry(): PoEntry {
-  return { raw: [], msgctxt: null, extractedComments: null, msgid: null, msgstr: null, msgstrIndex: -1, newTranslation: null };
+  return { raw: [], msgctxt: null, extractedComments: null, msgid: null, msgstr: null, msgstrIndex: -1, isPlural: false, newTranslation: null };
 }
 
 export function parsePo(filePath: string): PoEntry[] {
@@ -75,6 +79,14 @@ export function parsePo(filePath: string): PoEntry[] {
       if (match && current.msgid !== null) current.msgid += match[1];
     }
 
+    // msgid_plural — flagged so the run can report what it is skipping. This
+    // deliberately does NOT set `state`: correcting the state machine changes how
+    // the following continuation lines parse, which belongs with real plural
+    // support, not with this counter.
+    if (line.startsWith('msgid_plural ')) {
+      current.isPlural = true;
+    }
+
     // msgstr
     if (line.startsWith('msgstr ')) {
       const match = line.match(/^msgstr "(.*)"/);
@@ -118,7 +130,9 @@ export function applyTranslations(entries: PoEntry[]): number {
 }
 
 export function writePo(filePath: string, entries: PoEntry[]): void {
-  const output = entries.map(e => e.raw.join('\n')).join('\n\n');
+  // Trailing newline: gettext's own tools emit one, and without it every written
+  // .po shows up as "\ No newline at end of file" in the consuming repo's diff.
+  const output = entries.map(e => e.raw.join('\n')).join('\n\n') + '\n';
   writeFileSync(filePath, output);
 }
 

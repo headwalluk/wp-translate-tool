@@ -1,0 +1,26 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: fixture 1.0\n"
+"MIME-Version: 1.0\n"
+
+#. Plugin Name of the plugin
+msgid "Fixture Plugin"
+msgstr ""
+
+#. translators: %s is a folder name
+#: b.php:10
+msgid "Sent"
+msgstr ""
+
+#: b.php:20
+msgctxt "noun"
+msgid "Folder"
+msgstr ""
+
+#: b.php:30
+msgid "Already done"
+msgstr "Déjà fait"
+
+#: b.php:40
+msgid "TLS"
+msgstr ""

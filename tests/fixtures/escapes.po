@@ -1,0 +1,22 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: fixture 1.0\n"
+
+#: c.php:1
+msgid "Quote \"Host\" here"
+msgstr ""
+
+#: c.php:2
+msgid "Line one\nLine two"
+msgstr ""
+
+#: c.php:3
+msgid ""
+"A long string that "
+"spans several lines "
+"in the source file"
+msgstr ""
+
+#: c.php:4
+msgid "Tab\there and %1$s with %2$s"
+msgstr ""

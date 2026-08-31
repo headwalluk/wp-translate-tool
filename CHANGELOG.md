@@ -2,6 +2,23 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.8.1] - 2026-08-31
+
+### Fixed
+
+- Written `.po` files now end with a trailing newline. Previously the final line was written without one, which gettext's own tools always emit and which showed up as `\ No newline at end of file` in the diff of every plugin repo consuming these files. The next run of each plugin will produce a one-line whitespace-only diff per `.po` as a result
+
+### Added
+
+- `_n()` plural entries are now reported in the per-locale summary
+  (`N plural entries skipped (not yet supported)`). Plural support is not
+  implemented yet — an entry carrying `msgid_plural` is still parsed but never
+  translated — so this makes a previously silent gap visible rather than fixing
+  it. Full write-up and planned fix: `dev-notes/plural-strings-untranslated.md`
+- A test harness (`npm test`): a bash runner over `.po` fixtures checking that
+  the parser's output matches recorded golden files and that parse → write
+  round-trips byte for byte. No new dependencies
+
 ## [1.8.0] - 2026-06-19
 
 ### Added

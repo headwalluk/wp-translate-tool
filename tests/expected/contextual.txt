@@ -1,0 +1,56 @@
+== ENTRIES ==
+[0]
+  msgctxt     : null
+  comments    : null
+  msgid       : ""
+  msgstr      : "Project-Id-Version: fixture 1.0\\nMIME-Version: 1.0\\n"
+  msgstrIndex : 1
+  isPlural    : false
+  rawLines    : 4
+[1]
+  msgctxt     : null
+  comments    : null
+  msgid       : "Fixture Plugin"
+  msgstr      : ""
+  msgstrIndex : 2
+  isPlural    : false
+  rawLines    : 3
+[2]
+  msgctxt     : null
+  comments    : "%s is a folder name"
+  msgid       : "Sent"
+  msgstr      : ""
+  msgstrIndex : 3
+  isPlural    : false
+  rawLines    : 4
+[3]
+  msgctxt     : "noun"
+  comments    : null
+  msgid       : "Folder"
+  msgstr      : ""
+  msgstrIndex : 3
+  isPlural    : false
+  rawLines    : 4
+[4]
+  msgctxt     : null
+  comments    : null
+  msgid       : "Already done"
+  msgstr      : "Déjà fait"
+  msgstrIndex : 2
+  isPlural    : false
+  rawLines    : 3
+[5]
+  msgctxt     : null
+  comments    : null
+  msgid       : "TLS"
+  msgstr      : ""
+  msgstrIndex : 2
+  isPlural    : false
+  rawLines    : 3
+== SELECTION ==
+standard   : 2
+  "Fixture Plugin"
+  "TLS"
+contextual : 2
+  "Sent"
+  "Folder"
