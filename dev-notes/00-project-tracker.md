@@ -1,6 +1,6 @@
 # wp-translate-tool — Project Tracker
 
-**Version:** 1.9.0 (built, pending tag/push)
+**Version:** 1.10.0 (built, pending tag/push)
 **Last Updated:** 31 August 2026
 **Current Phase:** All milestones (1–5) complete
 **Overall Progress:** 5 of 5 milestones complete
@@ -16,6 +16,14 @@
   (`get_month`, `get_month_abbrev`, `get_weekday`, `get_weekday_abbrev`) plus
   `wp_date()` / `date_i18n()`. `BLOCK_VERSION` bumped 1.0.0 → 1.1.0, so
   already-synced plugins report stale until re-synced.
+- v1.10.0 — plural quality, from dogfooding v1.9.0 on a real 8-locale plugin.
+  Plural pairs now carry a synthesised context naming both source forms, fixing
+  a plural noun in the singular slot (4 of 8 locales), divergent nouns per form,
+  and moved placeholders — at no extra API cost. Agent block gains `_n()`/`_nx()`
+  guidance (`BLOCK_VERSION` 1.2.0). **Finding worth keeping:** a bare ambiguous
+  noun still diverges in `de_DE` with the pair context alone, stably across runs,
+  and only an `_nx()` context fixes it. The tool-side guard and the source-side
+  context are not redundant — they fix different halves.
 - v1.8.0 — DeepL rate-limit handling. Inter-request pause plus automatic retry
   with exponential backoff on 429/5xx/connection errors, honouring `Retry-After`.
   Tunable via `WP_TRANSLATE_API_DELAY_MS` (default 500, 0 disables) and

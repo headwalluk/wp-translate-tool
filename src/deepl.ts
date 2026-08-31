@@ -188,16 +188,25 @@ export async function translateContextual(
   }
 }
 
+// Tell DeepL that the two strings it is about to translate are the singular and
+// plural of one message. Without this it translates array elements completely
+// independently, which measurably produces:
+//   - different nouns per form  ("Review"/"Reviews" -> "Critique"/"Avis" in fr)
+//   - a plural noun in the singular slot ("1 Ergebnisse" in de)
+//   - placeholders moved         ("%s review" -> "Recensione di %s" in it)
+//   - the wrong grammatical form for a three-form locale's slot 1
+// Supplying the pair as context fixed every one of those in testing, at no
+// extra cost: `context` rides the same single request.
+function pluralPairContext(singular: string, plural: string): string {
+  return `Singular and plural forms of the same message: "${singular}" / "${plural}".`;
+}
+
 // Plural (_n()) entries: singular and plural form together in one request.
 //
 // This rides the per-entry path rather than the 50-string batch for two
 // reasons. DeepL's `context` is one string per request, so a plural carrying a
 // msgctxt or a translator comment cannot share a batch anyway; and the batch
 // path maps one array slot to one entry, which a two-form entry breaks.
-//
-// Pairing the forms buys fewer requests and a slot mapping that stays local —
-// NOT consistency between the two forms. DeepL translates array elements
-// independently and guarantees nothing across them.
 export async function translatePlurals(
   entries: PoEntry[],
   targetLang: string,
@@ -212,15 +221,22 @@ export async function translatePlurals(
     }
     if (i > 0 && REQUEST_DELAY_MS > 0) await sleep(REQUEST_DELAY_MS);
 
-    const texts = [unsanitize(item.msgid!)];
-    if (item.msgidPlural !== null) texts.push(unsanitize(item.msgidPlural));
+    const singular = unsanitize(item.msgid!);
+    const pluralForm = item.msgidPlural === null ? null : unsanitize(item.msgidPlural);
+    const texts = pluralForm === null ? [singular] : [singular, pluralForm];
+
+    // The author's own context (_x() msgctxt or a translators: comment) still
+    // takes precedence — the pair note is appended to it, never instead of it.
+    const authorContext = item.msgctxt ?? item.extractedComments;
+    const parts: string[] = [];
+    if (authorContext) parts.push(unsanitize(authorContext));
+    if (pluralForm !== null) parts.push(pluralPairContext(singular, pluralForm));
 
     const body: Record<string, unknown> = {
       text: texts,
       target_lang: deepLLang,
     };
-    const context = item.msgctxt ?? item.extractedComments;
-    if (context) body.context = unsanitize(context);
+    if (parts.length > 0) body.context = parts.join(' ');
 
     const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', body);
     setPluralTranslations(item, result.translations.map(t => sanitize(t.text)));

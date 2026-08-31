@@ -14,7 +14,7 @@ import { createHash } from 'crypto';
 
 // The block body's own version, independent of the tool version. Bump when the
 // canonical guidance below changes so synced plugins can detect a stale block.
-export const BLOCK_VERSION = '1.1.0';
+export const BLOCK_VERSION = '1.2.0';
 
 const BEGIN_PREFIX = '<!-- wp-translate:begin ';
 const END_MARKER = '<!-- wp-translate:end -->';
@@ -60,14 +60,51 @@ printf( esc_html__( 'Welcome back, %s', '__TEXTDOMAIN__' ), $name );
 Never split a sentence across multiple translation calls — word order differs
 between languages.
 
-### 3. Acronyms and technical tokens
+### 3. Use \`_n()\` for anything that can be counted
+
+Never build a count-dependent sentence by hand, and never settle for a single
+form that reads correctly only for one number. Languages differ in how many
+plural forms they have — English and German have two, French treats 0 as
+singular, Polish and Russian have three, Japanese has one, Arabic has six — and
+\`_n()\` is the only way to express that.
+
+\`\`\`php
+// Wrong — "1 reviews", and untranslatable into languages with other forms
+printf( esc_html__( '%d reviews', '__TEXTDOMAIN__' ), $count );
+
+// Right — wp-translate fills every form the target locale needs
+printf(
+    esc_html( _n( '%d review', '%d reviews', $count, '__TEXTDOMAIN__' ) ),
+    $count
+);
+\`\`\`
+
+Keep the placeholder in **both** forms, even when the singular reads fine
+without it (\`'%d review'\`, not \`'One review'\`) — some locales use the singular
+slot for other numbers too.
+
+For a short or ambiguous countable noun, use \`_nx()\` — the plural equivalent of
+\`_x()\` — so the context reaches DeepL:
+
+\`\`\`php
+// "Review" alone is ambiguous: critique? opinion? inspection?
+_nx( '%d review', '%d reviews', $count, 'customer feedback on a company', '__TEXTDOMAIN__' );
+\`\`\`
+
+**Locales needing more than two forms will have their extra slots left empty for
+a human translator.** DeepL supplies a singular and a plural; nobody can invent
+Polish's third form from those, and wp-translate deliberately leaves it blank
+rather than filling it with a plausible guess. Expect to see empty
+\`msgstr[2]\` entries in \`pl_PL\` — that is correct behaviour, not a failure.
+
+### 4. Acronyms and technical tokens
 
 wp-translate keeps common acronyms (\`TLS\`, \`API\`, \`SMTP\`, \`URL\`, \`ID\`, \`UTC\`, …)
 verbatim automatically. If you introduce an unusual acronym or product name that
 must not be translated, keep it as its own standalone string so it is recognised,
 or ask the maintainer to add it to the tool's acronym list.
 
-### 4. Don't translate dates — let WordPress localise them
+### 5. Don't translate dates — let WordPress localise them
 
 Never add month or day-of-week names (full or abbreviated) as translatable
 strings. DeepL frequently mistranslates short forms like \`Mon\`, \`Tue\`, \`Jan\`,
@@ -85,7 +122,7 @@ $wp_locale->get_weekday_abbrev( $weekday_name ); // "Mon"
 For formatted dates, prefer \`wp_date()\` / \`date_i18n()\`, which localise month and
 day names automatically.
 
-### 5. English source dialect
+### 6. English source dialect
 
 Write source strings in standard English. wp-translate handles English targets
 locally (no DeepL): \`en\`/\`en_US\` use the source as-is, and \`en_GB\`/\`en_AU\`/… get

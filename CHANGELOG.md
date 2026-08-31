@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.10.0] - 2026-08-31
+
+### Changed
+
+- **Plural pairs are now sent to DeepL with a synthesised context** naming the two source forms. Without it DeepL translates the singular and plural completely independently, which measurably produced: a plural noun in the singular slot (`1 Ergebnisse` in `de_DE`, `1 résultats` in `fr_FR`, `1 wyników` in `pl_PL`), different nouns for each form (`Review`/`Reviews` → `Critique`/`Avis` in `fr_FR`, `Reseña`/`Opiniones` in `es_ES`), placeholders moved (`%s review` → `Recensione di %s` in `it_IT`), and inconsistent prepositions between forms. All were fixed in testing against real translation files, at no extra cost — the context rides the same single request
+- An entry's own context (an `_x()`/`_nx()` `msgctxt`, or a `/* translators: */` comment) still takes precedence: the plural-pair note is appended to it, never used instead of it
+- For three-form locales this also improves slot 1, which is the "few" form: `pl_PL` `%s reviews` now yields `recenzje` rather than the genitive `recenzji`
+
+### Added
+
+- The agent-instructions block gains a section on plurals: use `_n()` for anything countable, keep the placeholder in both forms, and use `_nx()` for short or ambiguous countable nouns. It also explains that locales needing more than two forms will have their extra slots left empty for a human, so that is not mistaken for a failure. `BLOCK_VERSION` is bumped to `1.2.0`, so already-synced plugins report stale until re-synced
+
+  This is the source-side half of the same fix, and it is not decoration: a bare ambiguous noun like `Review`/`Reviews` still diverges in `de_DE` (`Bewertung`/`Rezensionen`) with the pair context alone — stably, across repeated runs — and adding an `_nx()` context resolves it to `Bewertung`/`Bewertungen` just as stably. No tool-side guard can supply meaning the source never carried
+
 ## [1.9.0] - 2026-08-31
 
 ### Added

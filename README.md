@@ -31,7 +31,14 @@ output that is grammatically broken rather than merely untranslated.
 
 wp-translate writes a `Plural-Forms` header matching the locale before syncing, so
 the right number of `msgstr[n]` slots is generated, then translates the singular and
-plural forms together so both are filled.
+plural forms together — telling DeepL that the two strings are forms of one message,
+which keeps them consistent with each other and stops the plural noun landing in the
+singular slot.
+
+For a short or ambiguous countable noun, add context at source with `_nx()` (the
+plural equivalent of `_x()`). Machine translation cannot recover meaning the source
+never carried: `Review`/`Reviews` alone still resolves inconsistently in German,
+where `_nx( '%d review', '%d reviews', $count, 'customer feedback', ... )` does not.
 
 - **More forms than DeepL can supply.** DeepL returns two forms. A locale needing
   three or more (Polish's one/few/many, Arabic's six) has slots neither of them
