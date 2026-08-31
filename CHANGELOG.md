@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.9.0] - 2026-08-31
+
+### Added
+
+- **Plural (`_n()`) string support.** Entries carrying `msgid_plural` were previously parsed but never selected, never counted, never sent to DeepL and never written back — the run reported success and left `msgstr[0] ""` untouched indefinitely. They are now translated end to end
+- A `Plural-Forms` header matching the target locale is written to each `.po` before syncing, so wp-cli generates the correct number of `msgstr[n]` slots. Without it, consumers fall back to the two-form Germanic rule, which is wrong for French (0 is singular), Polish and Russian (three forms), Japanese (one) and Arabic (six). Rules for 89 languages (plus locale-specific overrides such as `pt_BR`) live in `src/plurals.ts`, cross-checked against ~400 real-world `.po` files
+- Locales with more forms than DeepL can supply have their remaining slots **left empty for a translator**, and the count is reported in the run summary. A wrong plural that looks finished is worse than an obvious gap
+- Unknown locales warn before falling back to the Germanic default, and a `.po` whose existing `Plural-Forms` header disagrees with the expected rule is reported but never overwritten
+- English locales fill both plural forms from the source strings with no API call, spelling-converted for `en_GB` and family
+
+### Fixed
+
+- **Parser state-machine bug affecting multi-line plural entries.** Neither `msgid_plural` nor `msgstr[n]` changed the parser's state, so on an entry whose forms spanned several lines the plural form — and any existing translation — were appended to the end of `msgid`. This was previously harmless only because such entries were never selected for translation; it would have corrupted the text sent to DeepL as soon as they were
+
+### Changed
+
+- A locale's `.po` is now passed through `wp i18n update-po` when it is first created, where previously a fresh locale was only copied from the `.pot`. This is what allows plural slots to be generated correctly on the first run rather than the second
+- The per-locale summary now counts plural strings separately (`Found N standard, M contextual and P plural strings`), replacing the `plural entries skipped (not yet supported)` notice added in 1.8.1
+
 ## [1.8.1] - 2026-08-31
 
 ### Fixed

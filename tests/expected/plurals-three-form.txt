@@ -1,0 +1,51 @@
+== ENTRIES ==
+[0]
+  msgctxt     : null
+  comments    : null
+  msgid       : ""
+  msgidPlural : null
+  msgstr      : "Project-Id-Version: fixture 1.0\\nLanguage: pl_PL\\nPlural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\\n"
+  msgstrIndex : 1
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 5
+[1]
+  msgctxt     : null
+  comments    : null
+  msgid       : "%d profile"
+  msgidPlural : "%d profiles"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [3,4,5]
+  slotValues  : ["","",""]
+  rawLines    : 6
+[2]
+  msgctxt     : null
+  comments    : "%s is a company name"
+  msgid       : "%s review"
+  msgidPlural : "%s reviews"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [4,5,6]
+  slotValues  : ["","",""]
+  rawLines    : 7
+[3]
+  msgctxt     : null
+  comments    : null
+  msgid       : "Partially done"
+  msgidPlural : "Partially dones"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [3,4,5]
+  slotValues  : ["ALREADY-TRANSLATED","",""]
+  rawLines    : 6
+== SELECTION ==
+standard   : 0
+contextual : 0
+plural     : 2
+  "%d profile" / "%d profiles"
+  "%s review" / "%s reviews"

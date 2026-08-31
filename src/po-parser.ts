@@ -1,4 +1,5 @@
 import { readFileSync, writeFileSync } from 'fs';
+import { PluralForms, formatPluralForms } from './plurals.js';
 
 export interface PoEntry {
   raw: string[];
@@ -7,15 +8,28 @@ export interface PoEntry {
   msgid: string | null;
   msgstr: string | null;
   msgstrIndex: number;
-  // True for _n() entries (those carrying msgid_plural). Detection only — the
-  // translate path does not yet handle plurals, so these are reported and
-  // skipped. See dev-notes/plural-strings-untranslated.md.
+  // True for _n() entries (those carrying msgid_plural).
   isPlural: boolean;
+  msgidPlural: string | null;
+  // Plural entries carry one msgstr[n] slot per form. These are indexed by slot
+  // number: msgstrIndexes[n] is the raw-line index of `msgstr[n]`, and
+  // msgstrValues[n] is its parsed value. Both stay empty for ordinary entries,
+  // which use msgstr / msgstrIndex instead.
+  msgstrIndexes: number[];
+  msgstrValues: string[];
   newTranslation: string | null;
+  // One replacement line per plural slot, or null for a slot deliberately left
+  // empty (see setPluralTranslations).
+  newPluralTranslations: (string | null)[] | null;
 }
 
 function createEntry(): PoEntry {
-  return { raw: [], msgctxt: null, extractedComments: null, msgid: null, msgstr: null, msgstrIndex: -1, isPlural: false, newTranslation: null };
+  return {
+    raw: [], msgctxt: null, extractedComments: null, msgid: null,
+    msgstr: null, msgstrIndex: -1,
+    isPlural: false, msgidPlural: null, msgstrIndexes: [], msgstrValues: [],
+    newTranslation: null, newPluralTranslations: null,
+  };
 }
 
 export function parsePo(filePath: string): PoEntry[] {
@@ -23,7 +37,9 @@ export function parsePo(filePath: string): PoEntry[] {
   const lines = content.split('\n');
   const entries: PoEntry[] = [];
   let current = createEntry();
-  let state: 'NONE' | 'CTX' | 'ID' | 'STR' = 'NONE';
+  let state: 'NONE' | 'CTX' | 'ID' | 'IDP' | 'STR' | 'STRN' = 'NONE';
+  // Which msgstr[n] slot continuation lines belong to, while state is 'STRN'.
+  let currentSlot = -1;
 
   function pushEntry() {
     if (current.raw.length > 0) {
@@ -33,6 +49,7 @@ export function parsePo(filePath: string): PoEntry[] {
       if (current.raw.length > 0) entries.push(current);
     }
     current = createEntry();
+    currentSlot = -1;
   }
 
   for (const line of lines) {
@@ -79,12 +96,18 @@ export function parsePo(filePath: string): PoEntry[] {
       if (match && current.msgid !== null) current.msgid += match[1];
     }
 
-    // msgid_plural — flagged so the run can report what it is skipping. This
-    // deliberately does NOT set `state`: correcting the state machine changes how
-    // the following continuation lines parse, which belongs with real plural
-    // support, not with this counter.
+    // msgid_plural — its own state, so the continuation lines that follow are
+    // appended here rather than welded onto the end of msgid.
     if (line.startsWith('msgid_plural ')) {
-      current.isPlural = true;
+      const match = line.match(/^msgid_plural "(.*)"/);
+      if (match) {
+        current.isPlural = true;
+        current.msgidPlural = match[1];
+        state = 'IDP';
+      }
+    } else if (line.startsWith('"') && state === 'IDP') {
+      const match = line.match(/^"(.*)"/);
+      if (match && current.msgidPlural !== null) current.msgidPlural += match[1];
     }
 
     // msgstr
@@ -100,6 +123,19 @@ export function parsePo(filePath: string): PoEntry[] {
       if (match && current.msgstr !== null) current.msgstr += match[1];
     }
 
+    // msgstr[n] — plural slots. Like msgid_plural, this needs its own state:
+    // without one, everything after it lands in msgid.
+    const slotMatch = line.match(/^msgstr\[(\d+)\] "(.*)"/);
+    if (slotMatch) {
+      currentSlot = Number(slotMatch[1]);
+      current.msgstrIndexes[currentSlot] = current.raw.length;
+      current.msgstrValues[currentSlot] = slotMatch[2];
+      state = 'STRN';
+    } else if (line.startsWith('"') && state === 'STRN' && currentSlot > -1) {
+      const match = line.match(/^"(.*)"/);
+      if (match) current.msgstrValues[currentSlot] += match[1];
+    }
+
     current.raw.push(line);
   }
   pushEntry();
@@ -107,21 +143,75 @@ export function parsePo(filePath: string): PoEntry[] {
   return entries;
 }
 
-export function injectLanguageHeader(entries: PoEntry[], locale: string): void {
-  if (entries.length === 0 || entries[0].msgid !== '') return;
+export interface HeaderInjection {
+  addedLanguage: boolean;
+  addedPluralForms: boolean;
+  // Set when the file already carried a Plural-Forms header declaring a
+  // different number of forms than the table expects. Never overwritten — a
+  // translator may have set it deliberately, and clobbering it would discard
+  // that judgement. Surfaced so the caller can warn instead.
+  conflictingPluralForms: string | null;
+}
+
+// Insert the Language and Plural-Forms headers, if absent.
+//
+// This must run BEFORE `wp i18n update-po`: msgmerge decides how many msgstr[n]
+// slots each plural entry gets from the Plural-Forms header it finds in the
+// file it is merging into. Injecting afterwards means the slots are already
+// wrong, and a re-run is needed before they come right.
+export function injectHeaders(
+  entries: PoEntry[],
+  locale: string,
+  pluralForms: PluralForms,
+): HeaderInjection {
+  const result: HeaderInjection = {
+    addedLanguage: false,
+    addedPluralForms: false,
+    conflictingPluralForms: null,
+  };
+
+  if (entries.length === 0 || entries[0].msgid !== '') return result;
   const header = entries[0];
+  if (header.msgstrIndex < 0) return result;
+
   const headerContent = header.raw.join('\n');
+
   if (!headerContent.includes('"Language:')) {
-    if (header.msgstrIndex > -1) {
-      header.raw.splice(header.msgstrIndex + 1, 0, `"Language: ${locale}\\n"`);
+    header.raw.splice(header.msgstrIndex + 1, 0, `"Language: ${locale}\\n"`);
+    result.addedLanguage = true;
+  }
+
+  const existing = headerContent.match(/"Plural-Forms:\s*([^"]*?)\\n"/);
+  if (!existing) {
+    header.raw.splice(header.msgstrIndex + 1, 0, `"Plural-Forms: ${formatPluralForms(pluralForms)}\\n"`);
+    result.addedPluralForms = true;
+  } else {
+    const declared = existing[1].match(/nplurals\s*=\s*(\d+)/);
+    const declaredCount = declared ? Number(declared[1]) : -1;
+    if (declaredCount !== pluralForms.nplurals) {
+      result.conflictingPluralForms = existing[1].trim();
     }
   }
+
+  return result;
 }
 
 export function applyTranslations(entries: PoEntry[]): number {
   let count = 0;
   for (const entry of entries) {
-    if (entry.newTranslation && entry.msgstrIndex > -1) {
+    if (entry.newPluralTranslations) {
+      // Slots are pre-generated by msgmerge, so every write is a line
+      // replacement at a known index — no insertion, so no index shifting.
+      let wroteSlot = false;
+      for (let slot = 0; slot < entry.newPluralTranslations.length; slot++) {
+        const replacement = entry.newPluralTranslations[slot];
+        const rawIndex = entry.msgstrIndexes[slot];
+        if (replacement === null || rawIndex === undefined || rawIndex < 0) continue;
+        entry.raw[rawIndex] = replacement;
+        wroteSlot = true;
+      }
+      if (wroteSlot) count++;
+    } else if (entry.newTranslation && entry.msgstrIndex > -1) {
       entry.raw[entry.msgstrIndex] = entry.newTranslation;
       count++;
     }
@@ -167,15 +257,65 @@ export function unsanitize(text: string): string {
 // Set an entry's translation to its own source string (identity passthrough).
 // msgid is already in escaped PO form, so it can be reused verbatim as msgstr.
 export function setIdentityTranslation(entry: PoEntry): void {
-  if (entry.msgid !== null) entry.newTranslation = `msgstr "${entry.msgid}"`;
+  if (entry.isPlural) {
+    setPluralTranslations(entry, [entry.msgid, entry.msgidPlural]);
+  } else if (entry.msgid !== null) {
+    entry.newTranslation = `msgstr "${entry.msgid}"`;
+  }
 }
 
-export function getUntranslated(entries: PoEntry[]): { standard: PoEntry[]; contextual: PoEntry[] } {
-  const needs = entries.filter(e => e.msgid && e.msgid !== '' && e.msgstr === '');
+// Fill plural slots from already-escaped PO strings, one per form.
+//
+// Slots beyond the supplied forms are left untouched — for languages with more
+// than two forms (Polish's one/few/many, Arabic's six) there is no third string
+// to fill them with, and a plausible-but-wrong form that looks finished is
+// worse than an obvious gap a translator can find and complete.
+export function setPluralTranslations(entry: PoEntry, forms: (string | null)[]): void {
+  const lines: (string | null)[] = [];
+  for (let slot = 0; slot < entry.msgstrIndexes.length; slot++) {
+    const form = forms[slot] ?? null;
+    lines[slot] = form === null ? null : `msgstr[${slot}] "${form}"`;
+  }
+  entry.newPluralTranslations = lines;
+}
+
+// How many slots this entry has that setPluralTranslations would leave empty.
+export function countUnfilledSlots(entry: PoEntry, filledForms: number): number {
+  const slots = entry.msgstrIndexes.length;
+  return slots > filledForms ? slots - filledForms : 0;
+}
+
+export interface UntranslatedBuckets {
+  standard: PoEntry[];
+  contextual: PoEntry[];
+  plural: PoEntry[];
+}
+
+// A plural entry counts as untranslated only when EVERY slot is empty. A
+// partially filled entry is left alone: the missing slot is usually the third
+// form we deliberately declined to guess, and re-translating would overwrite
+// whatever a human put in the others.
+function isUntranslatedPlural(entry: PoEntry): boolean {
+  const slots = entry.msgstrIndexes.length;
+  if (slots === 0) return false;
+  let allEmpty = true;
+  for (let slot = 0; slot < slots; slot++) {
+    if (entry.msgstrValues[slot] !== '') {
+      allEmpty = false;
+      break;
+    }
+  }
+  return allEmpty;
+}
+
+export function getUntranslated(entries: PoEntry[]): UntranslatedBuckets {
+  const named = entries.filter(e => e.msgid && e.msgid !== '');
+  const needs = named.filter(e => !e.isPlural && e.msgstr === '');
   // Contextual = anything that carries disambiguating context for DeepL: a
   // msgctxt (_x()) or an extracted translator comment (#.).
   return {
     standard: needs.filter(e => !e.msgctxt && !e.extractedComments),
     contextual: needs.filter(e => e.msgctxt || e.extractedComments),
+    plural: named.filter(e => e.isPlural && isUntranslatedPlural(e)),
   };
 }

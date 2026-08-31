@@ -22,18 +22,23 @@ entries.forEach((entry, index) => {
   console.log(`  msgctxt     : ${JSON.stringify(entry.msgctxt)}`);
   console.log(`  comments    : ${JSON.stringify(entry.extractedComments)}`);
   console.log(`  msgid       : ${JSON.stringify(entry.msgid)}`);
+  console.log(`  msgidPlural : ${JSON.stringify(entry.msgidPlural)}`);
   console.log(`  msgstr      : ${JSON.stringify(entry.msgstr)}`);
   console.log(`  msgstrIndex : ${entry.msgstrIndex}`);
   console.log(`  isPlural    : ${entry.isPlural}`);
+  console.log(`  slotIndexes : ${JSON.stringify(entry.msgstrIndexes)}`);
+  console.log(`  slotValues  : ${JSON.stringify(entry.msgstrValues)}`);
   console.log(`  rawLines    : ${entry.raw.length}`);
 });
 
-const { standard, contextual } = getUntranslated(entries);
+const { standard, contextual, plural } = getUntranslated(entries);
 
 console.log('== SELECTION ==');
 console.log(`standard   : ${standard.length}`);
 for (const entry of standard) console.log(`  ${JSON.stringify(entry.msgid)}`);
 console.log(`contextual : ${contextual.length}`);
 for (const entry of contextual) console.log(`  ${JSON.stringify(entry.msgid)}`);
+console.log(`plural     : ${plural.length}`);
+for (const entry of plural) console.log(`  ${JSON.stringify(entry.msgid)} / ${JSON.stringify(entry.msgidPlural)}`);
 
 if (ROUNDTRIP_PATH) writePo(ROUNDTRIP_PATH, entries);

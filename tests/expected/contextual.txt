@@ -3,49 +3,67 @@
   msgctxt     : null
   comments    : null
   msgid       : ""
+  msgidPlural : null
   msgstr      : "Project-Id-Version: fixture 1.0\\nMIME-Version: 1.0\\n"
   msgstrIndex : 1
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 4
 [1]
   msgctxt     : null
   comments    : null
   msgid       : "Fixture Plugin"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 2
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 3
 [2]
   msgctxt     : null
   comments    : "%s is a folder name"
   msgid       : "Sent"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 3
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 4
 [3]
   msgctxt     : "noun"
   comments    : null
   msgid       : "Folder"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 3
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 4
 [4]
   msgctxt     : null
   comments    : null
   msgid       : "Already done"
+  msgidPlural : null
   msgstr      : "Déjà fait"
   msgstrIndex : 2
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 3
 [5]
   msgctxt     : null
   comments    : null
   msgid       : "TLS"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 2
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 3
 == SELECTION ==
 standard   : 2
@@ -54,3 +72,4 @@ standard   : 2
 contextual : 2
   "Sent"
   "Folder"
+plural     : 0

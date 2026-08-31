@@ -4,8 +4,9 @@ import { createInterface } from 'readline';
 import { loadConfig } from './config.js';
 import { validateLocales, checkDependencies } from './validation.js';
 import { findOrCreatePot, detectLocales } from './pot.js';
-import { parsePo, injectLanguageHeader, applyTranslations, writePo, getUntranslated, setIdentityTranslation, sanitize, unsanitize } from './po-parser.js';
-import { translateBatch, translateContextual, checkUsage } from './deepl.js';
+import { parsePo, injectHeaders, applyTranslations, writePo, getUntranslated, setIdentityTranslation, setPluralTranslations, countUnfilledSlots, sanitize, unsanitize } from './po-parser.js';
+import { getPluralForms, formatPluralForms } from './plurals.js';
+import { translateBatch, translateContextual, translatePlurals, checkUsage } from './deepl.js';
 import { englishTarget, toBritish } from './english.js';
 import { isProtectedAcronym } from './acronyms.js';
 import { updatePo, makeMo } from './wp-cli.js';
@@ -63,6 +64,36 @@ function parseArgs(): { pluginPath: string; locales: string[] } {
   return { pluginPath, locales };
 }
 
+// Insert Language and Plural-Forms into the .po BEFORE `wp i18n update-po`
+// runs. msgmerge reads Plural-Forms to decide how many msgstr[n] slots each
+// plural entry gets, so injecting after the merge leaves the slot count wrong
+// until the next run.
+function ensurePoHeaders(poFile: string, locale: string): void {
+  const { forms, known } = getPluralForms(locale);
+
+  if (!known) {
+    console.warn(`   ${locale}: WARNING — no plural rule known for this locale.`);
+    console.warn(`      Assuming ${formatPluralForms(forms)}`);
+    console.warn(`      If that is wrong, add the locale to src/plurals.ts.`);
+  }
+
+  const entries = parsePo(poFile);
+  const injection = injectHeaders(entries, locale, forms);
+
+  if (injection.conflictingPluralForms) {
+    console.warn(`   ${locale}: WARNING — existing Plural-Forms header disagrees with the expected rule.`);
+    console.warn(`      in file : ${injection.conflictingPluralForms}`);
+    console.warn(`      expected: ${formatPluralForms(forms)}`);
+    console.warn(`      Left unchanged: it may be deliberate, and overwriting a`);
+    console.warn(`      translator's choice is worse than reporting it. Slot count`);
+    console.warn(`      follows the file, so some forms may be unfillable.`);
+  }
+
+  if (injection.addedLanguage || injection.addedPluralForms) {
+    writePo(poFile, entries);
+  }
+}
+
 async function processLocale(
   poFile: string,
   locale: string,
@@ -70,18 +101,15 @@ async function processLocale(
   dryRun: boolean,
 ): Promise<number> {
   const entries = parsePo(poFile);
-  injectLanguageHeader(entries, locale);
 
-  const { standard, contextual } = getUntranslated(entries);
-  const total = standard.length + contextual.length;
+  const { standard, contextual, plural } = getUntranslated(entries);
+  const total = standard.length + contextual.length + plural.length;
 
-  // _n() plurals are not yet translatable. Report them rather than leaving the
-  // gap silent — an untranslated plural is otherwise invisible in the summary.
-  const pluralCount = entries.filter(e => e.isPlural).length;
-  if (pluralCount > 0) {
-    const noun = pluralCount === 1 ? 'entry' : 'entries';
-    console.log(`   ${locale}: ${pluralCount} plural ${noun} skipped (not yet supported).`);
-  }
+  // Slots we will knowingly leave empty. DeepL supplies a singular and a plural
+  // form; a locale with more than two (Polish, Russian, Arabic) has slots
+  // neither of them can fill, and guessing produces something that looks
+  // finished and is wrong. Report the gap so a translator can close it.
+  const unfilledSlots = plural.reduce((sum, e) => sum + countUnfilledSlots(e, 2), 0);
 
   if (total === 0) {
     console.log(`   ${locale}: Nothing new to translate.`);
@@ -106,10 +134,31 @@ async function processLocale(
           setIdentityTranslation(e);
         }
       }
-      console.log(`   ${locale}: ${all.length - converted} passed through, ${converted} localised to British spelling (no API call).`);
+      // Plurals take the same treatment, one form per slot. English needs no
+      // DeepL call for these at all — the correct output is the source strings,
+      // spelling-converted.
+      for (const e of plural) {
+        const britSingular = toBritish(unsanitize(e.msgid!));
+        const sourcePlural = e.msgidPlural === null ? null : unsanitize(e.msgidPlural);
+        const britPlural = sourcePlural === null ? null : toBritish(sourcePlural);
+        if (britSingular !== unsanitize(e.msgid!) || britPlural !== sourcePlural) {
+          converted++;
+        }
+        setPluralTranslations(e, [
+          sanitize(britSingular),
+          britPlural === null ? null : sanitize(britPlural),
+        ]);
+      }
+      const totalEnglish = all.length + plural.length;
+      console.log(`   ${locale}: ${totalEnglish - converted} passed through, ${converted} localised to British spelling (no API call).`);
     } else {
       for (const e of all) setIdentityTranslation(e);
-      console.log(`   ${locale}: ${all.length} string(s) — passthrough (English source dialect, no API call).`);
+      for (const e of plural) setIdentityTranslation(e);
+      console.log(`   ${locale}: ${all.length + plural.length} string(s) — passthrough (English source dialect, no API call).`);
+    }
+
+    if (plural.length > 0) {
+      console.log(`   ${locale}: ${plural.length} plural entr${plural.length === 1 ? 'y' : 'ies'} filled from source.`);
     }
 
     if (dryRun) return total;
@@ -127,15 +176,24 @@ async function processLocale(
   const apiContextual = contextual.filter(e => !acronyms.has(e));
 
   console.log(
-    `   ${locale}: Found ${standard.length} standard and ${contextual.length} contextual strings.` +
+    `   ${locale}: Found ${standard.length} standard, ${contextual.length} contextual` +
+    ` and ${plural.length} plural strings.` +
     (acronyms.size > 0 ? ` (${acronyms.size} acronym(s) kept verbatim)` : ''),
   );
+
+  if (unfilledSlots > 0) {
+    console.log(
+      `   ${locale}: ${unfilledSlots} plural slot(s) will be left empty for a` +
+      ` translator — this locale has more forms than DeepL can supply.`,
+    );
+  }
 
   if (dryRun) return total;
 
   for (const e of acronyms) setIdentityTranslation(e);
   if (apiStandard.length > 0) await translateBatch(apiStandard, locale, authKey);
   if (apiContextual.length > 0) await translateContextual(apiContextual, locale, authKey);
+  if (plural.length > 0) await translatePlurals(plural, locale, authKey);
 
   const count = applyTranslations(entries);
   writePo(poFile, entries);
@@ -284,11 +342,14 @@ async function main() {
     if (!dryRun) {
       if (poExists) {
         console.log(`>> Syncing ${locale} (keeping existing)...`);
-        updatePo(potFile, poFile);
       } else {
         console.log(`>> Creating ${locale} (fresh)...`);
         copyFileSync(potFile, poFile);
       }
+      // Headers first, then merge: msgmerge sizes each plural entry's slots
+      // from the Plural-Forms header it finds in this file.
+      ensurePoHeaders(poFile, locale);
+      updatePo(potFile, poFile);
     } else if (!poExists) {
       console.log(`>> Would create ${locale} (fresh)...`);
     }

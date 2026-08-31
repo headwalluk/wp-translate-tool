@@ -3,8 +3,15 @@
 **Filed:** 2026-08-31
 **Found while:** regenerating the language bundles for a plugin, after adding a
 single `_n()` string to an admin warning.
-**Status:** notes for a future wp-translate-tool change. Nothing has been worked
-around in the affected plugins — see "Why nothing was patched plugin-side".
+**Status:** ✅ RESOLVED in v1.9.0 (31 August 2026). Both gaps and the latent
+parser bug are fixed; see Milestone 5 in `00-project-tracker.md` for what shipped
+and how it was verified. This document is kept as the diagnosis that drove it —
+the line references below describe the v1.8.0 code, before the fix.
+
+One caveat carried forward: for locales with three or more forms, slot 1 is the
+"few" form and DeepL returns a generic nominative plural. The mapping is the best
+available fit, not a verified-correct one. Slots beyond the second are left empty
+for a translator by design.
 **Verified against source:** 31 August 2026 (v1.8.0). Line references below were
 re-checked, and the parser behaviour reproduced against a local fixture.
 

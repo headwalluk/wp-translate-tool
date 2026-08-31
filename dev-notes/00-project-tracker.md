@@ -1,10 +1,9 @@
 # wp-translate-tool — Project Tracker
 
-**Version:** 1.8.0 (released)
+**Version:** 1.9.0 (built, pending tag/push)
 **Last Updated:** 31 August 2026
-**Current Phase:** Milestones 1–4 complete and released; Milestone 5 (`_n()`
-plural support) planned, not started
-**Overall Progress:** 4 of 5 milestones complete
+**Current Phase:** All milestones (1–5) complete
+**Overall Progress:** 5 of 5 milestones complete
 
 **Post-release patches:**
 - v1.6.1 — added `grayscale` → `greyscale` to the en-GB conversion map (gap found
@@ -350,13 +349,13 @@ per-entry contextual path.
 
 ---
 
-### Milestone 5: `_n()` Plural Support 📋
+### Milestone 5: `_n()` Plural Support ✅
 
-**Status:** Planned — not started
+**Status:** Complete — pending commit/tag/push
 **Priority:** High
-**Target:** v1.9.0
-**Started:** —
-**Completed:** —
+**Target:** v1.9.0 (visibility counter shipped first in v1.8.1)
+**Started:** 31 August 2026
+**Completed:** 31 August 2026
 
 **Goal:** Make `_n()` plural entries translatable end-to-end. Today an entry with
 `msgid_plural` is parsed but never selected, never counted, never sent to DeepL
@@ -488,66 +487,83 @@ gets Polish wrong.**
 #### Implementation Checklist
 
 **Phase 0 — visibility only (ships standalone as v1.8.1)**
-- [ ] Set an `isPlural` flag in `parsePo()` when a line starts with `msgid_plural `
-- [ ] Report the count in the per-locale summary:
+- [x] Set an `isPlural` flag in `parsePo()` when a line starts with `msgid_plural `
+- [x] Report the count in the per-locale summary:
       `"N plural entries skipped (not yet supported)"`
-- [ ] **Must not touch the state machine, `getUntranslated()` or
+- [x] **Must not touch the state machine, `getUntranslated()` or
       `applyTranslations()`** — detection only, zero behaviour change, so it
       cannot regress anything and needs no plural fixture to prove safe
-- [ ] CHANGELOG + bump to v1.8.1 + build; commit, tag, push — *user-triggered*
+- [x] CHANGELOG + bump to v1.8.1 + build (released as v1.8.1); commit, tag, push — *user-triggered*
 
 **Phase 1 — metadata (gap 2, the important half)**
-- [ ] `src/plurals.ts`: locale → `{ nplurals, expression }` table covering the
+- [x] `src/plurals.ts`: locale → `{ nplurals, expression }` table covering the
       common WordPress locales, copied from the gettext manual
-- [ ] Lookup falls back to Germanic `nplurals=2; plural=(n != 1)` but **warns**
+- [x] Lookup falls back to Germanic `nplurals=2; plural=(n != 1)` but **warns**
       on an unlisted locale — never silent
-- [ ] Restructure the per-locale sequence in `src/index.ts`: ensure `.po` exists
+- [x] Restructure the per-locale sequence in `src/index.ts`: ensure `.po` exists
       → inject `Language:` + `Plural-Forms:` → `updatePo()` → parse. Header
       injection moves out of `processLocale()` to before the merge
-- [ ] Confirm the fresh path is unharmed by now running `update-po` over a
+- [x] Confirm the fresh path is unharmed by now running `update-po` over a
       straight `.pot` copy (case A says yes; re-check on a real plugin)
-- [ ] Regression: a locale whose `.po` already has translations keeps every one
+- [x] Regression: a locale whose `.po` already has translations keeps every one
       of them through the slot expansion (case B)
 
 **Phase 2 — parser (gap 1 + the latent trap)**
-- [ ] `PoEntry`: add `msgidPlural: string | null` and `msgstrIndexes: number[]`
-- [ ] Match `msgstr[` alongside `msgstr `, recording each slot's raw-line index
-- [ ] Set `state` on **both** `msgid_plural` and `msgstr[` — closes the
+- [x] `PoEntry`: add `msgidPlural: string | null` and `msgstrIndexes: number[]`
+- [x] Match `msgstr[` alongside `msgstr `, recording each slot's raw-line index
+- [x] Set `state` on **both** `msgid_plural` and `msgstr[` — closes the
       `msgid`-welding bug
-- [ ] `getUntranslated()`: treat "every slot empty" as untranslated for plurals
-- [ ] Round-trip must stay lossless for plural entries (regression: the current
+- [x] `getUntranslated()`: treat "every slot empty" as untranslated for plurals
+- [x] Round-trip must stay lossless for plural entries (regression: the current
       byte-identical behaviour is the baseline)
 
 **Phase 3 — translation + write-back**
-- [ ] Route plurals down `translateContextual()`: `text: [singular, plural]`,
+- [x] Route plurals down a dedicated `translatePlurals()`: `text: [singular, plural]`,
       `context` when the entry carries `msgctxt` or a `#. translators:` comment
-- [ ] Map `translations[0]` → `msgstr[0]`, `translations[1]` → `msgstr[1]`
-- [ ] `applyTranslations()`: write every slot by index. Slots are pre-generated
+- [x] Map `translations[0]` → `msgstr[0]`, `translations[1]` → `msgstr[1]`
+- [x] `applyTranslations()`: write every slot by index. Slots are pre-generated
       by msgmerge (Phase 1), so this stays line-replacement — no inserts, no
       index shifting
-- [ ] `nplurals > 2`: fill slots 0 and 1, **leave the rest empty** for a human
-- [ ] Run summary gains its own plural count, and reports how many slots were
+- [x] `nplurals > 2`: fill slots 0 and 1, **leave the rest empty** for a human
+- [x] Run summary gains its own plural count, and reports how many slots were
       left empty for manual completion — `standard`/`contextual` counts stay
       meaningful rather than absorbing plurals silently
 
 **Phase 4 — English locales**
-- [ ] Plural-aware `setIdentityTranslation()` — `msgstr[0]` from `msgid`,
+- [x] Plural-aware `setIdentityTranslation()` — `msgstr[0]` from `msgid`,
       `msgstr[1]` from `msgid_plural`
-- [ ] Plural-aware `toBritish` branch (`src/index.ts:96`) — same split, both forms
+- [x] Plural-aware `toBritish` branch (`src/index.ts:96`) — same split, both forms
       spelling-converted
-- [ ] `en_GB` plurals correct with **zero** DeepL calls (cheapest win: two
+- [x] `en_GB` plurals correct with **zero** DeepL calls (cheapest win: two
       Germanic slots need no `Plural-Forms` table to be right)
 
 **Phase 5 — release**
-- [ ] CHANGELOG + README (user-visible behaviour change) + bump to v1.9.0 + build
+- [x] CHANGELOG + README (user-visible behaviour change) + bump to v1.9.0 + build
 - [ ] Commit, tag `v1.9.0`, push main + tag — *user-triggered*
 
-**Verification plan:** regress against a plugin carrying five plural strings
-across eight locales including `en_GB` (identity path) and `pl_PL` (three forms)
-— every branch of the problem in one fixture. Checks:
-`msgstr[0]`/`msgstr[1]` filled in `fr_FR`; `grep -c 'msgstr\[2\]'` on `pl_PL`
-returns 5, not 0; `Plural-Forms` present with `nplurals=3`; `en_GB` correct with
-no API call; existing non-plural behaviour unchanged.
+**Verification (31 August 2026, all pass):**
+
+Test harness (`npm test`, 8 checks over 4 fixtures) — round-trip stayed lossless
+through the whole parser rewrite, which is the property that made the state-machine
+change safe to attempt. The multi-line plural fixture now parses `msgid` and
+`msgidPlural` as separate strings where before they were welded together, and a
+partially-translated plural is correctly excluded from selection.
+
+End-to-end against a synthetic plugin (3 plural strings, real `wp i18n make-pot`):
+
+| Case | Result |
+|---|---|
+| `en_GB` fresh | 3 plurals filled from source, both forms spelling-converted (`%d colorized items` → `%d colorised items`), **zero API calls** |
+| `pl_PL` fresh | msgmerge generated **3 slots** from the injected header; slots 0 and 1 filled by DeepL, slot 2 left empty and reported |
+| `pl_PL` re-run | "Nothing new to translate" — partially-filled entries not re-translated, existing slots preserved |
+| Conflicting header (`nplurals=2` on `pl_PL`) | Warned loudly, left unchanged |
+| Unknown locale (`mi_NZ`) | Warned before falling back to the Germanic default |
+
+**Note for whoever revisits this:** for locales with three or more forms, slot 1 is
+the "few" form, and what DeepL returns is a generic nominative plural. Mapping it to
+slot 1 is the most reasonable available fit, not a verified-correct one. Slot 0
+(the singular) is unambiguous. If plural quality in `pl_PL`/`ru_RU` ever comes into
+question, that mapping is the thing to look at first.
 
 ---
 

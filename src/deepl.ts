@@ -1,5 +1,5 @@
 import https from 'https';
-import { PoEntry, sanitize, unsanitize } from './po-parser.js';
+import { PoEntry, sanitize, unsanitize, setPluralTranslations } from './po-parser.js';
 
 const BATCH_SIZE = 50;
 const API_HOST = 'api-free.deepl.com';
@@ -182,6 +182,48 @@ export async function translateContextual(
     if (result.translations.length > 0) {
       item.newTranslation = `msgstr "${sanitize(result.translations[0].text)}"`;
     }
+  }
+  if (entries.length > 1) {
+    process.stdout.write(''.padEnd(40) + '\r');
+  }
+}
+
+// Plural (_n()) entries: singular and plural form together in one request.
+//
+// This rides the per-entry path rather than the 50-string batch for two
+// reasons. DeepL's `context` is one string per request, so a plural carrying a
+// msgctxt or a translator comment cannot share a batch anyway; and the batch
+// path maps one array slot to one entry, which a two-form entry breaks.
+//
+// Pairing the forms buys fewer requests and a slot mapping that stays local —
+// NOT consistency between the two forms. DeepL translates array elements
+// independently and guarantees nothing across them.
+export async function translatePlurals(
+  entries: PoEntry[],
+  targetLang: string,
+  authKey: string,
+): Promise<void> {
+  const deepLLang = mapLocale(targetLang);
+
+  for (let i = 0; i < entries.length; i++) {
+    const item = entries[i];
+    if (entries.length > 1) {
+      process.stdout.write(`   Translating plural ${i + 1}/${entries.length}...\r`);
+    }
+    if (i > 0 && REQUEST_DELAY_MS > 0) await sleep(REQUEST_DELAY_MS);
+
+    const texts = [unsanitize(item.msgid!)];
+    if (item.msgidPlural !== null) texts.push(unsanitize(item.msgidPlural));
+
+    const body: Record<string, unknown> = {
+      text: texts,
+      target_lang: deepLLang,
+    };
+    const context = item.msgctxt ?? item.extractedComments;
+    if (context) body.context = unsanitize(context);
+
+    const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', body);
+    setPluralTranslations(item, result.translations.map(t => sanitize(t.text)));
   }
   if (entries.length > 1) {
     process.stdout.write(''.padEnd(40) + '\r');

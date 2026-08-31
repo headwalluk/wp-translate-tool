@@ -17,10 +17,35 @@ If you omit the locales argument, the tool will auto-detect them from existing `
 ### What it does
 
 1. Regenerates the `.pot` template from the plugin source (ensuring new strings are always picked up)
-2. For each locale, syncs or creates a `.po` file from the template
+2. For each locale, syncs or creates a `.po` file from the template, setting the correct `Language` and `Plural-Forms` headers
 3. Identifies untranslated strings and sends them to DeepL (batched for efficiency; strings with context — an `_x()` `msgctxt` or a `/* translators: */` comment — are translated individually so DeepL can use that context to disambiguate)
 4. Writes translations back to the `.po` files
 5. Compiles all `.po` files into binary `.mo` files
+
+### Plural strings (`_n()`)
+
+Strings registered with `_n()` carry a singular and a plural form, and each locale
+needs a specific number of them: two for English and German, but one for Japanese,
+three for Polish and Russian, and six for Arabic. Getting that count wrong produces
+output that is grammatically broken rather than merely untranslated.
+
+wp-translate writes a `Plural-Forms` header matching the locale before syncing, so
+the right number of `msgstr[n]` slots is generated, then translates the singular and
+plural forms together so both are filled.
+
+- **More forms than DeepL can supply.** DeepL returns two forms. A locale needing
+  three or more (Polish's one/few/many, Arabic's six) has slots neither of them
+  fills. Those are **left empty for a translator** and reported in the run summary,
+  rather than filled with a guess — an empty slot is easy to find and complete,
+  whereas a plausible-but-wrong form looks finished and hides.
+- **Partly translated entries are left alone.** An entry is only translated when
+  every one of its slots is empty, so filling in that third form by hand is safe:
+  a later run will not overwrite it.
+- **English locales** need no API call at all — both forms come from the source
+  strings, spelling-converted where appropriate.
+- **Unknown locales** fall back to the two-form Germanic rule with a warning, never
+  silently. If a `.po` already carries a `Plural-Forms` header that disagrees with
+  the expected rule, it is reported but never overwritten — it may be deliberate.
 
 ### English locales
 
@@ -156,6 +181,7 @@ npm install
 | `npm run build` | Bundle to `dist/wp-translate.mjs` |
 | `npm run clean` | Remove `dist/` |
 | `npm run typecheck` | Type-check without emitting |
+| `npm test` | Run the test harness |
 | `npm start -- <args>` | Run the built script |
 
 ### Build from source
@@ -178,6 +204,24 @@ src/
   validation.ts   Locale format validation and dependency checks
   pot.ts          POT file discovery, generation, and locale detection
   po-parser.ts    PO file parsing and round-trip writing
-  deepl.ts        DeepL API client (batch + contextual translation)
+  plurals.ts      Per-locale gettext plural rules (Plural-Forms)
+  deepl.ts        DeepL API client (batch + contextual + plural translation)
   wp-cli.ts       Shell wrappers for wp-cli i18n commands
+
+tests/
+  run-tests.sh    Test harness (npm test)
+  driver.ts       Dumps parser results for comparison
+  fixtures/       Sample .po files
+  expected/       Golden files
 ```
+
+### Tests
+
+```bash
+npm test                        # run the harness
+UPDATE_EXPECTED=1 npm test      # regenerate golden files after an intentional change
+```
+
+Each fixture is checked two ways: the parser's output is compared against a recorded
+golden file, and parse → write must round-trip byte for byte. Read the diff before
+committing a regenerated golden.

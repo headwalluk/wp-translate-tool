@@ -3,41 +3,56 @@
   msgctxt     : null
   comments    : null
   msgid       : ""
+  msgidPlural : null
   msgstr      : "Project-Id-Version: fixture 1.0\\n"
   msgstrIndex : 1
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 3
 [1]
   msgctxt     : null
   comments    : null
   msgid       : "Quote \\\"Host\\\" here"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 2
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 3
 [2]
   msgctxt     : null
   comments    : null
   msgid       : "Line one\\nLine two"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 2
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 3
 [3]
   msgctxt     : null
   comments    : null
   msgid       : "A long string that spans several lines in the source file"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 5
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 6
 [4]
   msgctxt     : null
   comments    : null
   msgid       : "Tab\\there and %1$s with %2$s"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 2
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 3
 == SELECTION ==
 standard   : 4
@@ -46,3 +61,4 @@ standard   : 4
   "A long string that spans several lines in the source file"
   "Tab\\there and %1$s with %2$s"
 contextual : 0
+plural     : 0

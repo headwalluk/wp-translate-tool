@@ -3,35 +3,49 @@
   msgctxt     : null
   comments    : null
   msgid       : ""
+  msgidPlural : null
   msgstr      : "Project-Id-Version: fixture 1.0\\nMIME-Version: 1.0\\nContent-Type: text/plain; charset=UTF-8\\n"
   msgstrIndex : 1
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 5
 [1]
   msgctxt     : null
   comments    : null
   msgid       : "%d profile"
+  msgidPlural : "%d profiles"
   msgstr      : null
   msgstrIndex : -1
   isPlural    : true
+  slotIndexes : [3,4]
+  slotValues  : ["",""]
   rawLines    : 5
 [2]
   msgctxt     : null
   comments    : null
-  msgid       : "SINGULAR-FIRST-HALF singular-second-halfPLURAL-FIRST-HALF plural-second-halfTRANSLATED-SLOT0-FIRST translated-slot0-second"
+  msgid       : "SINGULAR-FIRST-HALF singular-second-half"
+  msgidPlural : "PLURAL-FIRST-HALF plural-second-half"
   msgstr      : null
   msgstrIndex : -1
   isPlural    : true
+  slotIndexes : [7,10]
+  slotValues  : ["TRANSLATED-SLOT0-FIRST translated-slot0-second",""]
   rawLines    : 11
 [3]
   msgctxt     : null
   comments    : null
   msgid       : "Last run outcome"
+  msgidPlural : null
   msgstr      : ""
   msgstrIndex : 2
   isPlural    : false
+  slotIndexes : []
+  slotValues  : []
   rawLines    : 3
 == SELECTION ==
 standard   : 1
   "Last run outcome"
 contextual : 0
+plural     : 1
+  "%d profile" / "%d profiles"
