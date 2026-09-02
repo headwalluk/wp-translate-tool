@@ -65,6 +65,30 @@ English targets are never sent to DeepL — machine-translating en→en is a no-
 
 For non-English locales, strings whose entire value is a common technical acronym (`TLS`, `API`, `TOTP`, `SMTP`, `URL`, `ID`, `UTC`, …) are kept verbatim rather than sent to DeepL, which tends to mangle context-free acronyms. Compound strings (e.g. `Enable TLS`) are still translated normally.
 
+### Plugin header fields
+
+WP-CLI extracts the metadata from a plugin's main PHP file comment header — `Plugin
+Name`, `Plugin URI`, `Description`, `Author`, `Author URI` — into the `.pot` as
+ordinary translatable strings. wp-translate never translates them. Each is filled
+from its own source text in every locale, with no API call.
+
+This is not a stylistic preference. A plugin name and an author's name are proper
+nouns: DeepL rendered `Paul Faulkner` as `Πολ Φόλκνερ` in `el_GR`, and the URI
+fields are not language-dependent at all. The `Description` is genuine prose and
+does translate acceptably, but it is skipped with the rest so the rule stays simple
+— the plugin header is not translated, with no exceptions to remember.
+
+- **A header string may also be a UI string.** `Plugin Name` is commonly reused as
+  an admin page title, and gettext gives one `msgid` one translation, so those
+  occurrences stay in the source language too. For a product name that is the
+  wanted behaviour.
+- **Fields already translated are reported, never rewritten.** A plugin translated
+  by an earlier version still carries them. Nothing in a `.po` distinguishes a
+  machine translation that should not have been made from a localisation someone
+  chose deliberately, so wp-translate warns and leaves it alone. To reset one,
+  clear its `msgstr` and re-run — the next run fills it from source.
+- **Theme headers** (`Theme Name`, `Theme URI`, …) are recognised the same way.
+
 ### Agent instructions
 
 wp-translate can maintain a short, versioned block of translation conventions in a plugin's AI-agent instructions file — guidance for coding agents on writing `_x()` context, using placeholders, localising dates via `$wp_locale`, and running the tool. This helps machine translation at the source.

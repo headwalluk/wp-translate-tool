@@ -1,0 +1,54 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: fixture 1.0\n"
+"MIME-Version: 1.0\n"
+"Language: el_GR\n"
+
+#. Plugin Name of the plugin
+#: fixture-plugin.php
+#: includes/class-admin.php:73
+msgid "Tidy Resize Images"
+msgstr "Τακτοποίηση και αλλαγή μεγέθους εικόνων"
+
+#. Plugin URI of the plugin
+#: fixture-plugin.php
+msgid "https://github.com/headwalluk/tidy-resize-images"
+msgstr "https://github.com/headwalluk/tidy-resize-images"
+
+#. Description of the plugin
+#: fixture-plugin.php
+msgid "Keep the WordPress Media Library lean."
+msgstr ""
+
+#. Author of the plugin
+#: fixture-plugin.php
+msgid "Paul Faulkner"
+msgstr "Πολ Φόλκνερ"
+
+#. Author URI of the plugin
+#: fixture-plugin.php
+msgid "https://headwall-hosting.com/"
+msgstr ""
+
+#. Theme Name of the theme
+#: style.css
+msgid "Fixture Theme"
+msgstr ""
+
+#. Plugin Name of the plugin/theme
+#: legacy.php
+msgid "Legacy Marker Plugin"
+msgstr ""
+
+#. translators: %s is the display name of the plugin
+#: a.php:10
+msgid "Welcome to %s"
+msgstr ""
+
+#: a.php:20
+msgid "Author of the plugin"
+msgstr ""
+
+#: a.php:30
+msgid "Save changes"
+msgstr ""

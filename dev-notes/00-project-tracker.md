@@ -1,7 +1,7 @@
 # wp-translate-tool — Project Tracker
 
-**Version:** 1.10.0 (built, pending tag/push)
-**Last Updated:** 31 August 2026
+**Version:** 1.11.0 (built, pending tag/push)
+**Last Updated:** 2 September 2026
 **Current Phase:** All milestones (1–5) complete
 **Overall Progress:** 5 of 5 milestones complete
 
@@ -16,6 +16,20 @@
   (`get_month`, `get_month_abbrev`, `get_weekday`, `get_weekday_abbrev`) plus
   `wp_date()` / `date_i18n()`. `BLOCK_VERSION` bumped 1.0.0 → 1.1.0, so
   already-synced plugins report stale until re-synced.
+- v1.11.0 — plugin/theme file-header fields are never translated. Found by
+  inspecting a real 8-locale plugin: `Author` came back as `Πολ Φόλκνερ` in
+  `el_GR` and the plugin name was translated in all eight locales. The five
+  fields WP-CLI extracts (`Plugin Name`, `Plugin URI`, `Description`, `Author`,
+  `Author URI`) are now filled from source, identity-style, like acronyms.
+  **Findings worth keeping:** (1) detection keys off WP-CLI's own `#. <Field> of
+  the plugin` marker, gated on a known-field set — a permissive regex would
+  silently swallow a real UI string, which is the failure mode least likely to be
+  noticed; (2) a header msgid is not necessarily *only* a header — `Plugin Name`
+  is commonly reused as an admin page title, and one msgid gets one translation,
+  so those UI occurrences stay in the source language too; (3) skipping only
+  touches empty `msgstr` entries, so pre-existing bad header translations survive
+  in every already-translated plugin — these are reported, never rewritten, since
+  a .po cannot distinguish a bad machine translation from a deliberate human one.
 - v1.10.0 — plural quality, from dogfooding v1.9.0 on a real 8-locale plugin.
   Plural pairs now carry a synthesised context naming both source forms, fixing
   a plural noun in the singular slot (4 of 8 locales), divergent nouns per form,

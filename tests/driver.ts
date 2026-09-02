@@ -4,7 +4,7 @@
 // prints; tests/run-tests.sh does the comparing. Keep the output format stable
 // — changing it invalidates every golden file at once.
 
-import { parsePo, getUntranslated, writePo } from '../src/po-parser.js';
+import { parsePo, getUntranslated, findAlteredPluginHeaders, writePo } from '../src/po-parser.js';
 
 const FIXTURE_PATH = process.argv[2];
 const ROUNDTRIP_PATH = process.argv[3];
@@ -21,6 +21,7 @@ entries.forEach((entry, index) => {
   console.log(`[${index}]`);
   console.log(`  msgctxt     : ${JSON.stringify(entry.msgctxt)}`);
   console.log(`  comments    : ${JSON.stringify(entry.extractedComments)}`);
+  console.log(`  headerField : ${JSON.stringify(entry.pluginHeaderField)}`);
   console.log(`  msgid       : ${JSON.stringify(entry.msgid)}`);
   console.log(`  msgidPlural : ${JSON.stringify(entry.msgidPlural)}`);
   console.log(`  msgstr      : ${JSON.stringify(entry.msgstr)}`);
@@ -31,7 +32,7 @@ entries.forEach((entry, index) => {
   console.log(`  rawLines    : ${entry.raw.length}`);
 });
 
-const { standard, contextual, plural } = getUntranslated(entries);
+const { standard, contextual, plural, pluginHeaders } = getUntranslated(entries);
 
 console.log('== SELECTION ==');
 console.log(`standard   : ${standard.length}`);
@@ -40,5 +41,14 @@ console.log(`contextual : ${contextual.length}`);
 for (const entry of contextual) console.log(`  ${JSON.stringify(entry.msgid)}`);
 console.log(`plural     : ${plural.length}`);
 for (const entry of plural) console.log(`  ${JSON.stringify(entry.msgid)} / ${JSON.stringify(entry.msgidPlural)}`);
+console.log(`pluginHdrs : ${pluginHeaders.length}`);
+for (const entry of pluginHeaders) console.log(`  ${entry.pluginHeaderField}: ${JSON.stringify(entry.msgid)}`);
+
+const altered = findAlteredPluginHeaders(entries);
+console.log('== ALTERED PLUGIN HEADERS ==');
+console.log(`count      : ${altered.length}`);
+for (const item of altered) {
+  console.log(`  ${item.field}: ${JSON.stringify(item.source)} -> ${JSON.stringify(item.translation)}`);
+}
 
 if (ROUNDTRIP_PATH) writePo(ROUNDTRIP_PATH, entries);

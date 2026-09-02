@@ -2,6 +2,40 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.11.0] - 2026-09-02
+
+### Changed
+
+- **Plugin/theme file-header fields are no longer translated.** `wp i18n make-pot`
+  extracts `Plugin Name`, `Plugin URI`, `Description`, `Author` and `Author URI`
+  from the main plugin file's comment header as ordinary translatable strings, and
+  every one of them was being sent to DeepL. Confirmed against a real 8-locale
+  plugin: `Paul Faulkner` came back as `Πολ Φόλκνερ` in `el_GR`, and the plugin
+  name was translated in all eight (`Tidy Resize Images` → `Τακτοποίηση και αλλαγή
+  μεγέθους εικόνων`, `Bilder übersichtlich in der Größe anpassen`). The URI fields
+  survived only because DeepL happens to leave bare URLs alone — nothing guaranteed
+  it. These fields are now filled from their own source text in every locale,
+  English included, with no API call
+- `Description` is skipped along with the rest. It is the one header field that
+  translates acceptably, but excluding it keeps the rule to a single sentence with
+  no exception to remember
+- Header fields are counted and reported separately from translations, so the run
+  summary continues to mean strings that were actually translated
+
+### Added
+
+- A run reports header fields that **already** carry a translation, and leaves them
+  untouched. Skipping only affects entries with an empty `msgstr`, so a plugin
+  translated by an earlier version keeps its bad header translations in both `.po`
+  and compiled `.mo` until dealt with. Nothing in the file distinguishes a machine
+  translation that should not have been made from a deliberate human localisation,
+  so this warns rather than reverting — clearing the `msgstr` and re-running fills
+  it from source
+- `tests/fixtures/plugin-headers.po` covers the five plugin fields, theme headers,
+  the pre-2.2 WP-CLI `of the plugin/theme` marker, and two false-positive guards: a
+  `/* translators: */` comment ending in "of the plugin", and a real UI string whose
+  msgid *is* `"Author of the plugin"`. Both still translate normally
+
 ## [1.10.0] - 2026-08-31
 
 ### Changed

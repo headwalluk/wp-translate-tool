@@ -2,6 +2,7 @@
 [0]
   msgctxt     : null
   comments    : null
+  headerField : null
   msgid       : ""
   msgidPlural : null
   msgstr      : "Project-Id-Version: fixture 1.0\\nMIME-Version: 1.0\\nContent-Type: text/plain; charset=UTF-8\\n"
@@ -13,6 +14,7 @@
 [1]
   msgctxt     : null
   comments    : null
+  headerField : null
   msgid       : "%d profile"
   msgidPlural : "%d profiles"
   msgstr      : null
@@ -24,6 +26,7 @@
 [2]
   msgctxt     : null
   comments    : null
+  headerField : null
   msgid       : "SINGULAR-FIRST-HALF singular-second-half"
   msgidPlural : "PLURAL-FIRST-HALF plural-second-half"
   msgstr      : null
@@ -35,6 +38,7 @@
 [3]
   msgctxt     : null
   comments    : null
+  headerField : null
   msgid       : "Last run outcome"
   msgidPlural : null
   msgstr      : ""
@@ -49,3 +53,6 @@ standard   : 1
 contextual : 0
 plural     : 1
   "%d profile" / "%d profiles"
+pluginHdrs : 0
+== ALTERED PLUGIN HEADERS ==
+count      : 0

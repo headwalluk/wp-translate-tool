@@ -1,10 +1,14 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { PluralForms, formatPluralForms } from './plurals.js';
+import { matchPluginHeaderComment } from './plugin-headers.js';
 
 export interface PoEntry {
   raw: string[];
   msgctxt: string | null;
   extractedComments: string | null;
+  // Set when this entry is a field of the plugin/theme file header (e.g.
+  // 'Plugin Name', 'Author'), naming the field. Never translated.
+  pluginHeaderField: string | null;
   msgid: string | null;
   msgstr: string | null;
   msgstrIndex: number;
@@ -25,7 +29,7 @@ export interface PoEntry {
 
 function createEntry(): PoEntry {
   return {
-    raw: [], msgctxt: null, extractedComments: null, msgid: null,
+    raw: [], msgctxt: null, extractedComments: null, pluginHeaderField: null, msgid: null,
     msgstr: null, msgstrIndex: -1,
     isPlural: false, msgidPlural: null, msgstrIndexes: [], msgstrValues: [],
     newTranslation: null, newPluralTranslations: null,
@@ -60,8 +64,9 @@ export function parsePo(filePath: string): PoEntry[] {
     }
 
     // Translator comments (#. translators: ...) from `/* translators: */` in
-    // source — used as DeepL context. Other `#.` comments (auto-generated header
-    // metadata like "Plugin Name of the plugin") are intentionally ignored.
+    // source — used as DeepL context. The other `#.` comment that matters is
+    // wp-cli's plugin/theme header marker ("Plugin Name of the plugin"), which
+    // flags the entry as never-translate. Any remaining `#.` comment is ignored.
     if (line.startsWith('#.')) {
       const match = line.match(/^#\.\s*translators:\s*(.+)$/i);
       if (match) {
@@ -69,6 +74,9 @@ export function parsePo(filePath: string): PoEntry[] {
         current.extractedComments = current.extractedComments
           ? `${current.extractedComments} ${note}`
           : note;
+      } else {
+        const headerField = matchPluginHeaderComment(line);
+        if (headerField) current.pluginHeaderField = headerField;
       }
     }
 
@@ -289,6 +297,10 @@ export interface UntranslatedBuckets {
   standard: PoEntry[];
   contextual: PoEntry[];
   plural: PoEntry[];
+  // Plugin/theme header fields with an empty msgstr. These never reach DeepL —
+  // they are filled from their own source string (see setIdentityTranslation)
+  // so that they settle, rather than being re-offered on every run.
+  pluginHeaders: PoEntry[];
 }
 
 // A plural entry counts as untranslated only when EVERY slot is empty. A
@@ -310,12 +322,42 @@ function isUntranslatedPlural(entry: PoEntry): boolean {
 
 export function getUntranslated(entries: PoEntry[]): UntranslatedBuckets {
   const named = entries.filter(e => e.msgid && e.msgid !== '');
-  const needs = named.filter(e => !e.isPlural && e.msgstr === '');
+  // Header fields are split off before anything else, so no later bucket can
+  // pick one up and send it for translation.
+  const headerFields = named.filter(e => e.pluginHeaderField !== null);
+  const body = named.filter(e => e.pluginHeaderField === null);
+  const needs = body.filter(e => !e.isPlural && e.msgstr === '');
   // Contextual = anything that carries disambiguating context for DeepL: a
   // msgctxt (_x()) or an extracted translator comment (#.).
   return {
     standard: needs.filter(e => !e.msgctxt && !e.extractedComments),
     contextual: needs.filter(e => e.msgctxt || e.extractedComments),
-    plural: named.filter(e => e.isPlural && isUntranslatedPlural(e)),
+    plural: body.filter(e => e.isPlural && isUntranslatedPlural(e)),
+    pluginHeaders: headerFields.filter(e => e.msgstr === ''),
   };
+}
+
+export interface AlteredPluginHeader {
+  field: string;
+  source: string;
+  translation: string;
+}
+
+// Header fields already carrying a translation that differs from the source —
+// typically written by a run of this tool from before header fields were
+// skipped, but possibly a deliberate human choice.
+//
+// These are reported and never rewritten. Nothing in the file distinguishes a
+// machine translation that should not have been made from a localisation
+// someone chose on purpose, and silently reverting the latter is the worse
+// error of the two. Clearing the msgstr by hand puts the entry back in the
+// pluginHeaders bucket, where the next run fills it from source.
+export function findAlteredPluginHeaders(entries: PoEntry[]): AlteredPluginHeader[] {
+  return entries
+    .filter(e => e.pluginHeaderField !== null && e.msgid && e.msgstr && e.msgstr !== e.msgid)
+    .map(e => ({
+      field: e.pluginHeaderField!,
+      source: unsanitize(e.msgid!),
+      translation: unsanitize(e.msgstr!),
+    }));
 }

@@ -4,7 +4,7 @@ import { createInterface } from 'readline';
 import { loadConfig } from './config.js';
 import { validateLocales, checkDependencies } from './validation.js';
 import { findOrCreatePot, detectLocales } from './pot.js';
-import { parsePo, injectHeaders, applyTranslations, writePo, getUntranslated, setIdentityTranslation, setPluralTranslations, countUnfilledSlots, sanitize, unsanitize } from './po-parser.js';
+import { parsePo, injectHeaders, applyTranslations, writePo, getUntranslated, findAlteredPluginHeaders, setIdentityTranslation, setPluralTranslations, countUnfilledSlots, sanitize, unsanitize, AlteredPluginHeader } from './po-parser.js';
 import { getPluralForms, formatPluralForms } from './plurals.js';
 import { translateBatch, translateContextual, translatePlurals, checkUsage } from './deepl.js';
 import { englishTarget, toBritish } from './english.js';
@@ -94,6 +94,35 @@ function ensurePoHeaders(poFile: string, locale: string): void {
   }
 }
 
+// Longest translation shown in the altered-header warning before truncation.
+// A plugin Description runs to several hundred characters; the point of the
+// line is to identify which field drifted, not to reproduce it in full.
+const MAX_REPORTED_LENGTH = 60;
+
+function truncateForReport(text: string): string {
+  return text.length > MAX_REPORTED_LENGTH
+    ? `${text.slice(0, MAX_REPORTED_LENGTH - 1)}…`
+    : text;
+}
+
+// Report header fields that already carry a translation, without changing them.
+// Earlier versions of this tool sent these to DeepL, so a plugin translated
+// before the skip existed still has them in its .po (and its compiled .mo).
+function reportAlteredPluginHeaders(locale: string, altered: AlteredPluginHeader[]): void {
+  if (altered.length === 0) return;
+
+  const subject = altered.length === 1 ? 'field carries' : 'fields carry';
+  console.warn(`   ${locale}: WARNING — ${altered.length} plugin-header ${subject} a translation`);
+  console.warn(`      that differs from the source. Left unchanged: it may be deliberate.`);
+
+  const width = Math.max(...altered.map(a => a.field.length));
+  for (const item of altered) {
+    console.warn(`      ${item.field.padEnd(width)} : ${truncateForReport(item.translation)}`);
+  }
+
+  console.warn(`      To reset one to the source text, clear its msgstr and re-run.`);
+}
+
 async function processLocale(
   poFile: string,
   locale: string,
@@ -102,7 +131,7 @@ async function processLocale(
 ): Promise<number> {
   const entries = parsePo(poFile);
 
-  const { standard, contextual, plural } = getUntranslated(entries);
+  const { standard, contextual, plural, pluginHeaders } = getUntranslated(entries);
   const total = standard.length + contextual.length + plural.length;
 
   // Slots we will knowingly leave empty. DeepL supplies a singular and a plural
@@ -111,9 +140,23 @@ async function processLocale(
   // finished and is wrong. Report the gap so a translator can close it.
   const unfilledSlots = plural.reduce((sum, e) => sum + countUnfilledSlots(e, 2), 0);
 
+  // Plugin/theme header fields (Plugin Name, Author, the URIs, Description) are
+  // filled from their own source string in every locale, English or not, and
+  // never sent to DeepL. They are deliberately outside `total`: nothing here is
+  // translated, so counting them as translations would overstate the run.
+  for (const entry of pluginHeaders) setIdentityTranslation(entry);
+  if (pluginHeaders.length > 0) {
+    const label = pluginHeaders.length === 1 ? 'field' : 'fields';
+    console.log(`   ${locale}: ${pluginHeaders.length} plugin-header ${label} kept as source (not translated).`);
+  }
+  reportAlteredPluginHeaders(locale, findAlteredPluginHeaders(entries));
+
   if (total === 0) {
     console.log(`   ${locale}: Nothing new to translate.`);
-    if (!dryRun) writePo(poFile, entries);
+    if (!dryRun) {
+      applyTranslations(entries);
+      writePo(poFile, entries);
+    }
     return 0;
   }
 
@@ -163,7 +206,7 @@ async function processLocale(
 
     if (dryRun) return total;
 
-    const count = applyTranslations(entries);
+    const count = applyTranslations(entries) - pluginHeaders.length;
     writePo(poFile, entries);
     console.log(`   ${locale}: Updated ${count} strings.`);
     return count;
@@ -195,7 +238,7 @@ async function processLocale(
   if (apiContextual.length > 0) await translateContextual(apiContextual, locale, authKey);
   if (plural.length > 0) await translatePlurals(plural, locale, authKey);
 
-  const count = applyTranslations(entries);
+  const count = applyTranslations(entries) - pluginHeaders.length;
   writePo(poFile, entries);
   console.log(`   ${locale}: Updated ${count} strings.`);
   return count;

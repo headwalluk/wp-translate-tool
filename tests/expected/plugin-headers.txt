@@ -1,0 +1,149 @@
+== ENTRIES ==
+[0]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : ""
+  msgidPlural : null
+  msgstr      : "Project-Id-Version: fixture 1.0\\nMIME-Version: 1.0\\nLanguage: el_GR\\n"
+  msgstrIndex : 1
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 5
+[1]
+  msgctxt     : null
+  comments    : null
+  headerField : "Plugin Name"
+  msgid       : "Tidy Resize Images"
+  msgidPlural : null
+  msgstr      : "Τακτοποίηση και αλλαγή μεγέθους εικόνων"
+  msgstrIndex : 4
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 5
+[2]
+  msgctxt     : null
+  comments    : null
+  headerField : "Plugin URI"
+  msgid       : "https://github.com/headwalluk/tidy-resize-images"
+  msgidPlural : null
+  msgstr      : "https://github.com/headwalluk/tidy-resize-images"
+  msgstrIndex : 3
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 4
+[3]
+  msgctxt     : null
+  comments    : null
+  headerField : "Description"
+  msgid       : "Keep the WordPress Media Library lean."
+  msgidPlural : null
+  msgstr      : ""
+  msgstrIndex : 3
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 4
+[4]
+  msgctxt     : null
+  comments    : null
+  headerField : "Author"
+  msgid       : "Paul Faulkner"
+  msgidPlural : null
+  msgstr      : "Πολ Φόλκνερ"
+  msgstrIndex : 3
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 4
+[5]
+  msgctxt     : null
+  comments    : null
+  headerField : "Author URI"
+  msgid       : "https://headwall-hosting.com/"
+  msgidPlural : null
+  msgstr      : ""
+  msgstrIndex : 3
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 4
+[6]
+  msgctxt     : null
+  comments    : null
+  headerField : "Theme Name"
+  msgid       : "Fixture Theme"
+  msgidPlural : null
+  msgstr      : ""
+  msgstrIndex : 3
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 4
+[7]
+  msgctxt     : null
+  comments    : null
+  headerField : "Plugin Name"
+  msgid       : "Legacy Marker Plugin"
+  msgidPlural : null
+  msgstr      : ""
+  msgstrIndex : 3
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 4
+[8]
+  msgctxt     : null
+  comments    : "%s is the display name of the plugin"
+  headerField : null
+  msgid       : "Welcome to %s"
+  msgidPlural : null
+  msgstr      : ""
+  msgstrIndex : 3
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 4
+[9]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : "Author of the plugin"
+  msgidPlural : null
+  msgstr      : ""
+  msgstrIndex : 2
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 3
+[10]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : "Save changes"
+  msgidPlural : null
+  msgstr      : ""
+  msgstrIndex : 2
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 3
+== SELECTION ==
+standard   : 2
+  "Author of the plugin"
+  "Save changes"
+contextual : 1
+  "Welcome to %s"
+plural     : 0
+pluginHdrs : 4
+  Description: "Keep the WordPress Media Library lean."
+  Author URI: "https://headwall-hosting.com/"
+  Theme Name: "Fixture Theme"
+  Plugin Name: "Legacy Marker Plugin"
+== ALTERED PLUGIN HEADERS ==
+count      : 2
+  Plugin Name: "Tidy Resize Images" -> "Τακτοποίηση και αλλαγή μεγέθους εικόνων"
+  Author: "Paul Faulkner" -> "Πολ Φόλκνερ"

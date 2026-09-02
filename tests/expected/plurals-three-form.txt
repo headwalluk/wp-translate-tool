@@ -2,6 +2,7 @@
 [0]
   msgctxt     : null
   comments    : null
+  headerField : null
   msgid       : ""
   msgidPlural : null
   msgstr      : "Project-Id-Version: fixture 1.0\\nLanguage: pl_PL\\nPlural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\\n"
@@ -13,6 +14,7 @@
 [1]
   msgctxt     : null
   comments    : null
+  headerField : null
   msgid       : "%d profile"
   msgidPlural : "%d profiles"
   msgstr      : null
@@ -24,6 +26,7 @@
 [2]
   msgctxt     : null
   comments    : "%s is a company name"
+  headerField : null
   msgid       : "%s review"
   msgidPlural : "%s reviews"
   msgstr      : null
@@ -35,6 +38,7 @@
 [3]
   msgctxt     : null
   comments    : null
+  headerField : null
   msgid       : "Partially done"
   msgidPlural : "Partially dones"
   msgstr      : null
@@ -49,3 +53,6 @@ contextual : 0
 plural     : 2
   "%d profile" / "%d profiles"
   "%s review" / "%s reviews"
+pluginHdrs : 0
+== ALTERED PLUGIN HEADERS ==
+count      : 0
