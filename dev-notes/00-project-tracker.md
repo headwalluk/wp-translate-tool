@@ -7,7 +7,7 @@
 
 **Post-release patches:**
 - v1.6.1 — added `grayscale` → `greyscale` to the en-GB conversion map (gap found
-  while dogfooding `easy-logo-carousel`). Confirmed: manual poedit fixes are never
+  while running the tool on `easy-logo-carousel`). Confirmed: manual poedit fixes are never
   overwritten on re-run (only empty `msgstr` entries are filled; `update-po`
   preserves existing translations).
 - v1.7.0 — agent-instruction block now advises against adding month/day-of-week
@@ -30,7 +30,7 @@
   touches empty `msgstr` entries, so pre-existing bad header translations survive
   in every already-translated plugin — these are reported, never rewritten, since
   a .po cannot distinguish a bad machine translation from a deliberate human one.
-- v1.10.0 — plural quality, from dogfooding v1.9.0 on a real 8-locale plugin.
+- v1.10.0 — plural quality, from running v1.9.0 on a real 8-locale plugin.
   Plural pairs now carry a synthesised context naming both source forms, fixing
   a plural noun in the singular slot (4 of 8 locales), divergent nouns per form,
   and moved placeholders — at no extra API cost. Agent block gains `_n()`/`_nx()`
@@ -589,7 +589,7 @@ question, that mapping is the thing to look at first.
 
 ---
 
-## Future Ideas / Backlog (from dogfooding, post-v1.6.1)
+## Future Ideas / Backlog (from real-world use, post-v1.6.1)
 
 Candidates for a future milestone — none committed, captured so they aren't
 rediscovered:
@@ -610,7 +610,7 @@ rediscovered:
    this has to land at the same time, or those entries are never revisited.
 3. **Curated lists are living data.** `AMERICAN_TO_BRITISH` (`src/english.ts`) and
    the acronym denylist (`src/acronyms.ts`) are hand-curated; expect to extend
-   them as dogfooding surfaces gaps (`grayscale` → `greyscale` was the first,
+   them as real-world use surfaces gaps (`grayscale` → `greyscale` was the first,
    shipped in v1.6.1). Low effort, ongoing.
 
 ## Technical Debt
