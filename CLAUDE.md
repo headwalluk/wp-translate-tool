@@ -42,6 +42,15 @@ index.ts (entry point, orchestration)
 
 `build.ts` uses esbuild to bundle all TypeScript into a single ESM file with `#!/usr/bin/env node` shebang and executable permissions. No runtime npm dependencies — everything is bundled.
 
+## Documentation
+
+- `docs/` holds the real documentation, and is tracked. **One audience per file** —
+  e.g. developer, website operator, web designer — named in the file's opening lines.
+  Several files may share an audience; no file serves two.
+- `dev-notes/` is working material: the project tracker, bug hand-offs, test data,
+  log snippets. It is **not tracked** (`.gitignore`), so it can hold things that must
+  not reach GitHub. Promote anything a reader needs into `docs/`.
+
 ## Conventions
 
 - ESM throughout (`"type": "module"` in package.json, `.mjs` output)
