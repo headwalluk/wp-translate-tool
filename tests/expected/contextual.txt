@@ -82,3 +82,7 @@ pluginHdrs : 1
   Plugin Name: "Fixture Plugin"
 == ALTERED PLUGIN HEADERS ==
 count      : 0
+== EXTRA PLURAL SLOTS ==
+outstanding before : 0
+filled             : 0
+outstanding after  : 0

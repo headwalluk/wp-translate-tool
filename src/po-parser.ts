@@ -216,6 +216,8 @@ export function applyTranslations(entries: PoEntry[]): number {
         const rawIndex = entry.msgstrIndexes[slot];
         if (replacement === null || rawIndex === undefined || rawIndex < 0) continue;
         entry.raw[rawIndex] = replacement;
+        // Keep the parsed value in step, so later slot checks see the new text.
+        entry.msgstrValues[slot] = replacement.match(/^msgstr\[\d+\] "(.*)"$/)?.[1] ?? '';
         wroteSlot = true;
       }
       if (wroteSlot) count++;
@@ -274,10 +276,8 @@ export function setIdentityTranslation(entry: PoEntry): void {
 
 // Fill plural slots from already-escaped PO strings, one per form.
 //
-// Slots beyond the supplied forms are left untouched — for languages with more
-// than two forms (Polish's one/few/many, Arabic's six) there is no third string
-// to fill them with, and a plausible-but-wrong form that looks finished is
-// worse than an obvious gap a translator can find and complete.
+// Slots beyond the supplied forms are left untouched here; fillExtraSlotsFromSource
+// deals with them.
 export function setPluralTranslations(entry: PoEntry, forms: (string | null)[]): void {
   const lines: (string | null)[] = [];
   for (let slot = 0; slot < entry.msgstrIndexes.length; slot++) {
@@ -287,10 +287,49 @@ export function setPluralTranslations(entry: PoEntry, forms: (string | null)[]):
   entry.newPluralTranslations = lines;
 }
 
-// How many slots this entry has that setPluralTranslations would leave empty.
-export function countUnfilledSlots(entry: PoEntry, filledForms: number): number {
-  const slots = entry.msgstrIndexes.length;
-  return slots > filledForms ? slots - filledForms : 0;
+// Slots the plain singular and plural translations can fill.
+export const PLAIN_PLURAL_FORMS = 2;
+
+function isTranslatablePlural(entry: PoEntry): boolean {
+  return entry.isPlural && entry.msgidPlural !== null && entry.pluginHeaderField === null;
+}
+
+// Fill empty plural slots beyond the plain two with the English plural source.
+//
+// WordPress returns an empty slot as the translation (blank text), so a slot
+// the run could not translate gets the English source instead. Writes raw lines directly,
+// so it must run after getUntranslated. Returns the number of slots filled.
+export function fillExtraSlotsFromSource(entries: PoEntry[]): number {
+  let filled = 0;
+  for (const entry of entries) {
+    if (!isTranslatablePlural(entry)) continue;
+    for (let slot = PLAIN_PLURAL_FORMS; slot < entry.msgstrIndexes.length; slot++) {
+      const rawIndex = entry.msgstrIndexes[slot];
+      if (rawIndex === undefined || entry.msgstrValues[slot] !== '') continue;
+      entry.raw[rawIndex] = `msgstr[${slot}] "${entry.msgidPlural}"`;
+      entry.msgstrValues[slot] = entry.msgidPlural!;
+      filled++;
+    }
+  }
+  return filled;
+}
+
+// Count plural slots beyond the plain two still holding the English source (or nothing).
+//
+// Stateless, so it also finds slots filled by earlier runs. A slot equal to
+// msgid_plural is not counted when slot 1 equals it too: the string is the same
+// in both languages (e.g. "%d MB"), so the source is the right answer.
+export function countSourceFilledSlots(entries: PoEntry[]): number {
+  let outstanding = 0;
+  for (const entry of entries) {
+    if (!isTranslatablePlural(entry)) continue;
+    const sameInBothLanguages = entry.msgstrValues[1] === entry.msgidPlural;
+    for (let slot = PLAIN_PLURAL_FORMS; slot < entry.msgstrIndexes.length; slot++) {
+      const value = entry.msgstrValues[slot];
+      if (value === '' || (value === entry.msgidPlural && !sameInBothLanguages)) outstanding++;
+    }
+  }
+  return outstanding;
 }
 
 export interface UntranslatedBuckets {
@@ -304,9 +343,8 @@ export interface UntranslatedBuckets {
 }
 
 // A plural entry counts as untranslated only when EVERY slot is empty. A
-// partially filled entry is left alone: the missing slot is usually the third
-// form we deliberately declined to guess, and re-translating would overwrite
-// whatever a human put in the others.
+// partially filled entry is left alone: re-translating would overwrite whatever
+// a human put in the other slots.
 function isUntranslatedPlural(entry: PoEntry): boolean {
   const slots = entry.msgstrIndexes.length;
   if (slots === 0) return false;

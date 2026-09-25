@@ -56,3 +56,19 @@ plural     : 2
 pluginHdrs : 0
 == ALTERED PLUGIN HEADERS ==
 count      : 0
+== EXTRA PLURAL SLOTS ==
+outstanding before : 3
+filled             : 3
+outstanding after  : 3
+  "%d profile"
+    msgstr[0] ""
+    msgstr[1] ""
+    msgstr[2] "%d profiles"
+  "%s review"
+    msgstr[0] ""
+    msgstr[1] ""
+    msgstr[2] "%s reviews"
+  "Partially done"
+    msgstr[0] "ALREADY-TRANSLATED"
+    msgstr[1] ""
+    msgstr[2] "Partially dones"

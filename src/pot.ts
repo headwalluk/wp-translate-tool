@@ -2,19 +2,18 @@ import { readdirSync, existsSync } from 'fs';
 import { join, basename } from 'path';
 import { makePot } from './wp-cli.js';
 
-export function findOrCreatePot(pluginPath: string): string {
+// Regenerate the .pot from source, into outputDir when given (dry run) or languages/.
+export function findOrCreatePot(pluginPath: string, outputDir: string | null = null): string {
   const langDir = join(pluginPath, 'languages');
 
-  // Determine output path from existing .pot or plugin basename
-  let outputPath: string;
+  // The file name carries the text domain, so keep an existing .pot's name
+  // even when writing elsewhere.
+  let potName = `${basename(pluginPath)}.pot`;
   if (existsSync(langDir)) {
     const potFiles = readdirSync(langDir).filter(f => f.endsWith('.pot'));
-    outputPath = potFiles.length > 0
-      ? join(langDir, potFiles[0])
-      : join(langDir, `${basename(pluginPath)}.pot`);
-  } else {
-    outputPath = join(langDir, `${basename(pluginPath)}.pot`);
+    if (potFiles.length > 0) potName = potFiles[0];
   }
+  const outputPath = join(outputDir ?? langDir, potName);
 
   // Always regenerate from source to pick up new strings
   console.log('>> Regenerating .pot from plugin source...');

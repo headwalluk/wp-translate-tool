@@ -1,5 +1,7 @@
 import https from 'https';
 import { PoEntry, sanitize, unsanitize, setPluralTranslations } from './po-parser.js';
+import { getPluralForms } from './plurals.js';
+import { sampleNumbers, planSampleTexts, resolveSampleTranslations } from './plural-samples.js';
 
 const BATCH_SIZE = 50;
 const API_HOST = 'api-free.deepl.com';
@@ -194,25 +196,31 @@ export async function translateContextual(
 //   - different nouns per form  ("Review"/"Reviews" -> "Critique"/"Avis" in fr)
 //   - a plural noun in the singular slot ("1 Ergebnisse" in de)
 //   - placeholders moved         ("%s review" -> "Recensione di %s" in it)
-//   - the wrong grammatical form for a three-form locale's slot 1
-// Supplying the pair as context fixed every one of those in testing, at no
-// extra cost: `context` rides the same single request.
+// Supplying the pair as context reduces all three at no extra cost: `context`
+// rides the same single request. The singular slot is only reliable with a
+// sample number (see plural-samples.ts).
 function pluralPairContext(singular: string, plural: string): string {
   return `Singular and plural forms of the same message: "${singular}" / "${plural}".`;
 }
 
-// Plural (_n()) entries: singular and plural form together in one request.
+// Plural (_n()) entries: one request per entry, holding the singular and plural
+// source plus one sample-number text per slot (see plural-samples.ts).
 //
 // This rides the per-entry path rather than the 50-string batch for two
 // reasons. DeepL's `context` is one string per request, so a plural carrying a
 // msgctxt or a translator comment cannot share a batch anyway; and the batch
 // path maps one array slot to one entry, which a two-form entry breaks.
+//
+// Each slot takes its sample translation when the number comes back exactly
+// once. Otherwise slots 0 and 1 fall back to the plain singular and plural
+// translations, and later slots stay empty for fillExtraSlotsFromSource.
 export async function translatePlurals(
   entries: PoEntry[],
   targetLang: string,
   authKey: string,
 ): Promise<void> {
   const deepLLang = mapLocale(targetLang);
+  const samples = sampleNumbers(getPluralForms(targetLang).forms);
 
   for (let i = 0; i < entries.length; i++) {
     const item = entries[i];
@@ -224,6 +232,11 @@ export async function translatePlurals(
     const singular = unsanitize(item.msgid!);
     const pluralForm = item.msgidPlural === null ? null : unsanitize(item.msgidPlural);
     const texts = pluralForm === null ? [singular] : [singular, pluralForm];
+    // Slot count follows the file, so a mismatched Plural-Forms header disables the samples.
+    const plan = pluralForm === null
+      ? null
+      : planSampleTexts(singular, pluralForm, samples, item.msgstrIndexes.length);
+    if (plan !== null) texts.push(...plan.texts);
 
     // The author's own context (_x() msgctxt or a translators: comment) still
     // takes precedence — the pair note is appended to it, never instead of it.
@@ -239,7 +252,12 @@ export async function translatePlurals(
     if (parts.length > 0) body.context = parts.join(' ');
 
     const result: DeepLResponse = await apiRequest(authKey, '/v2/translate', body);
-    setPluralTranslations(item, result.translations.map(t => sanitize(t.text)));
+    const translated = result.translations.map(t => t.text);
+    const plainForms = translated.slice(0, pluralForm === null ? 1 : 2);
+    const slotForms = plan === null
+      ? plainForms
+      : resolveSampleTranslations(plan, translated.slice(plainForms.length), plainForms);
+    setPluralTranslations(item, slotForms.map(form => (form === null ? null : sanitize(form))));
   }
   if (entries.length > 1) {
     process.stdout.write(''.padEnd(40) + '\r');

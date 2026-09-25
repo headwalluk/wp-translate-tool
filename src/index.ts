@@ -1,11 +1,13 @@
-import { existsSync, copyFileSync, readFileSync, writeFileSync } from 'fs';
+import { existsSync, copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
 import { basename, join, resolve } from 'path';
 import { createInterface } from 'readline';
 import { loadConfig } from './config.js';
 import { validateLocales, checkDependencies } from './validation.js';
 import { findOrCreatePot, detectLocales } from './pot.js';
-import { parsePo, injectHeaders, applyTranslations, writePo, getUntranslated, findAlteredPluginHeaders, setIdentityTranslation, setPluralTranslations, countUnfilledSlots, sanitize, unsanitize, AlteredPluginHeader } from './po-parser.js';
+import { parsePo, injectHeaders, applyTranslations, writePo, getUntranslated, findAlteredPluginHeaders, setIdentityTranslation, setPluralTranslations, fillExtraSlotsFromSource, countSourceFilledSlots, sanitize, unsanitize, AlteredPluginHeader } from './po-parser.js';
 import { getPluralForms, formatPluralForms } from './plurals.js';
+import { findOneWordLabels, reportOneWordLabels, OneWordLabel } from './spot-check.js';
 import { translateBatch, translateContextual, translatePlurals, checkUsage } from './deepl.js';
 import { englishTarget, toBritish } from './english.js';
 import { isProtectedAcronym } from './acronyms.js';
@@ -123,22 +125,32 @@ function reportAlteredPluginHeaders(locale: string, altered: AlteredPluginHeader
   console.warn(`      To reset one to the source text, clear its msgstr and re-run.`);
 }
 
+// Report plural slots holding the English source, in terms of what users see.
+function reportSourceFilledSlots(locale: string, outstanding: number, filledThisRun: number, dryRun: boolean): void {
+  if (outstanding === 0) return;
+
+  const filledVerb = dryRun ? 'would be filled' : 'filled this run';
+  const filledNote = filledThisRun > 0 ? ` (${filledThisRun} ${filledVerb})` : '';
+  console.log(`   ${locale}: ${outstanding} plural slot(s) hold the English source${filledNote}.`);
+  console.log(`      WordPress shows English for the numbers those slots cover. A translator can`);
+  console.log(`      replace them, or clear every msgstr[n] of the entry and re-run to translate it.`);
+}
+
+interface LocaleResult {
+  count: number;
+  oneWordLabels: OneWordLabel[];
+}
+
 async function processLocale(
   poFile: string,
   locale: string,
   authKey: string,
   dryRun: boolean,
-): Promise<number> {
+): Promise<LocaleResult> {
   const entries = parsePo(poFile);
 
   const { standard, contextual, plural, pluginHeaders } = getUntranslated(entries);
   const total = standard.length + contextual.length + plural.length;
-
-  // Slots we will knowingly leave empty. DeepL supplies a singular and a plural
-  // form; a locale with more than two (Polish, Russian, Arabic) has slots
-  // neither of them can fill, and guessing produces something that looks
-  // finished and is wrong. Report the gap so a translator can close it.
-  const unfilledSlots = plural.reduce((sum, e) => sum + countUnfilledSlots(e, 2), 0);
 
   // Plugin/theme header fields (Plugin Name, Author, the URIs, Description) are
   // filled from their own source string in every locale, English or not, and
@@ -151,20 +163,14 @@ async function processLocale(
   }
   reportAlteredPluginHeaders(locale, findAlteredPluginHeaders(entries));
 
-  if (total === 0) {
-    console.log(`   ${locale}: Nothing new to translate.`);
-    if (!dryRun) {
-      applyTranslations(entries);
-      writePo(poFile, entries);
-    }
-    return 0;
-  }
-
   // English targets never go to DeepL (en->en is a no-op there). en/en_US pass
   // through verbatim; en_GB/en_AU/... get local American->British conversion.
   const mode = englishTarget(locale);
+  let oneWordLabels: OneWordLabel[] = [];
 
-  if (mode !== 'none') {
+  if (total === 0) {
+    console.log(`   ${locale}: Nothing new to translate.`);
+  } else if (mode !== 'none') {
     const all = [...standard, ...contextual];
     let converted = 0;
     if (mode === 'gb-convert') {
@@ -203,45 +209,42 @@ async function processLocale(
     if (plural.length > 0) {
       console.log(`   ${locale}: ${plural.length} plural entr${plural.length === 1 ? 'y' : 'ies'} filled from source.`);
     }
+  } else {
+    // Keep protected acronyms verbatim instead of letting DeepL mangle them.
+    const all = [...standard, ...contextual];
+    const acronyms = new Set(all.filter(e => isProtectedAcronym(unsanitize(e.msgid!))));
+    const apiStandard = standard.filter(e => !acronyms.has(e));
+    const apiContextual = contextual.filter(e => !acronyms.has(e));
 
-    if (dryRun) return total;
-
-    const count = applyTranslations(entries) - pluginHeaders.length;
-    writePo(poFile, entries);
-    console.log(`   ${locale}: Updated ${count} strings.`);
-    return count;
-  }
-
-  // Keep protected acronyms verbatim instead of letting DeepL mangle them.
-  const all = [...standard, ...contextual];
-  const acronyms = new Set(all.filter(e => isProtectedAcronym(unsanitize(e.msgid!))));
-  const apiStandard = standard.filter(e => !acronyms.has(e));
-  const apiContextual = contextual.filter(e => !acronyms.has(e));
-
-  console.log(
-    `   ${locale}: Found ${standard.length} standard, ${contextual.length} contextual` +
-    ` and ${plural.length} plural strings.` +
-    (acronyms.size > 0 ? ` (${acronyms.size} acronym(s) kept verbatim)` : ''),
-  );
-
-  if (unfilledSlots > 0) {
     console.log(
-      `   ${locale}: ${unfilledSlots} plural slot(s) will be left empty for a` +
-      ` translator — this locale has more forms than DeepL can supply.`,
+      `   ${locale}: Found ${standard.length} standard, ${contextual.length} contextual` +
+      ` and ${plural.length} plural strings.` +
+      (acronyms.size > 0 ? ` (${acronyms.size} acronym(s) kept verbatim)` : ''),
     );
+
+    if (!dryRun) {
+      for (const e of acronyms) setIdentityTranslation(e);
+      if (apiStandard.length > 0) await translateBatch(apiStandard, locale, authKey);
+      if (apiContextual.length > 0) await translateContextual(apiContextual, locale, authKey);
+      if (plural.length > 0) await translatePlurals(plural, locale, authKey);
+      oneWordLabels = findOneWordLabels(apiContextual, locale);
+    }
   }
 
-  if (dryRun) return total;
+  const count = dryRun ? total : applyTranslations(entries) - pluginHeaders.length;
 
-  for (const e of acronyms) setIdentityTranslation(e);
-  if (apiStandard.length > 0) await translateBatch(apiStandard, locale, authKey);
-  if (apiContextual.length > 0) await translateContextual(apiContextual, locale, authKey);
-  if (plural.length > 0) await translatePlurals(plural, locale, authKey);
+  // After translations are applied, so only slots DeepL could not fill get the source.
+  // A dry run leaves out new plurals: the real run will translate those.
+  const newPlurals = new Set(plural);
+  const settled = dryRun ? entries.filter(entry => !newPlurals.has(entry)) : entries;
+  const slotsFilled = fillExtraSlotsFromSource(settled);
+  reportSourceFilledSlots(locale, countSourceFilledSlots(settled), slotsFilled, dryRun);
 
-  const count = applyTranslations(entries) - pluginHeaders.length;
-  writePo(poFile, entries);
-  console.log(`   ${locale}: Updated ${count} strings.`);
-  return count;
+  if (!dryRun) {
+    writePo(poFile, entries);
+    if (total > 0) console.log(`   ${locale}: Updated ${count} strings.`);
+  }
+  return { count, oneWordLabels };
 }
 
 function confirm(question: string): Promise<boolean> {
@@ -370,51 +373,66 @@ async function main() {
   console.log(`Plugin path : ${pluginPath}`);
   console.log(`Locales     : ${locales.join(',')}`);
 
-  const potFile = findOrCreatePot(pluginPath);
-  console.log(`>> Source POT: ${potFile}`);
+  // A dry run does all its work on copies in a temp directory, so it runs the
+  // same sequence as a real run and counts what a real run would translate.
+  const workDir = dryRun ? mkdtempSync(join(tmpdir(), 'wp-translate-')) : null;
+  try {
+    await translateLocales(pluginPath, locales, deeplAuthKey, workDir);
+  } finally {
+    if (workDir !== null) rmSync(workDir, { recursive: true, force: true });
+  }
+}
+
+// Sync, translate and write each locale; compile the .mo files unless workDir is set.
+async function translateLocales(
+  pluginPath: string,
+  locales: string[],
+  authKey: string,
+  workDir: string | null,
+): Promise<void> {
+  const dryRun = workDir !== null;
+  const potFile = findOrCreatePot(pluginPath, workDir);
+  console.log(`>> Source POT: ${dryRun ? '(temporary copy) ' : ''}${potFile}`);
 
   const domain = basename(potFile, '.pot');
   let totalStrings = 0;
   let localesProcessed = 0;
+  const oneWordLabels: OneWordLabel[] = [];
 
   for (const locale of locales) {
-    const poFile = join(pluginPath, 'languages', `${domain}-${locale}.po`);
-
+    const fileName = `${domain}-${locale}.po`;
+    const poFile = join(pluginPath, 'languages', fileName);
+    const workFile = workDir !== null ? join(workDir, fileName) : poFile;
     const poExists = existsSync(poFile);
 
-    if (!dryRun) {
-      if (poExists) {
-        console.log(`>> Syncing ${locale} (keeping existing)...`);
-      } else {
-        console.log(`>> Creating ${locale} (fresh)...`);
-        copyFileSync(potFile, poFile);
-      }
-      // Headers first, then merge: msgmerge sizes each plural entry's slots
-      // from the Plural-Forms header it finds in this file.
-      ensurePoHeaders(poFile, locale);
-      updatePo(potFile, poFile);
-    } else if (!poExists) {
-      console.log(`>> Would create ${locale} (fresh)...`);
+    if (poExists) {
+      console.log(`>> ${dryRun ? 'Would sync' : 'Syncing'} ${locale} (keeping existing)...`);
+      if (dryRun) copyFileSync(poFile, workFile);
+    } else {
+      console.log(`>> ${dryRun ? 'Would create' : 'Creating'} ${locale} (fresh)...`);
+      copyFileSync(potFile, workFile);
     }
+    // Headers first, then merge: msgmerge sizes each plural entry's slots
+    // from the Plural-Forms header it finds in this file.
+    ensurePoHeaders(workFile, locale);
+    updatePo(potFile, workFile);
 
-    // In dry-run a fresh locale's .po is not created, so read the POT as the
-    // basis for what would be translated. Outside dry-run the .po always exists
-    // here (just created/synced above) and must be the file we read and write.
-    const sourceFile = dryRun && !poExists ? potFile : poFile;
-    const count = await processLocale(sourceFile, locale, deeplAuthKey, dryRun);
-    totalStrings += count;
-    if (count > 0) localesProcessed++;
+    const result = await processLocale(workFile, locale, authKey, dryRun);
+    totalStrings += result.count;
+    if (result.count > 0) localesProcessed++;
+    oneWordLabels.push(...result.oneWordLabels);
   }
 
   if (dryRun) {
     console.log(`\n[dry-run] Would translate ${totalStrings} strings across ${localesProcessed} locale(s).`);
-    return;
+  } else {
+    console.log('>> Compiling .mo files...');
+    makeMo(join(pluginPath, 'languages/'));
+
+    reportOneWordLabels(oneWordLabels);
+
+    console.log(`\n>> Done: ${localesProcessed} locale(s), ${totalStrings} strings translated.`);
   }
-
-  console.log('>> Compiling .mo files...');
-  makeMo(join(pluginPath, 'languages/'));
-
-  console.log(`\n>> Done: ${localesProcessed} locale(s), ${totalStrings} strings translated.`);
 }
 
 main().catch(err => {

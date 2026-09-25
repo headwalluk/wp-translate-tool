@@ -11,6 +11,8 @@
 #               preserves raw lines, so any change that breaks losslessness is a
 #               data-loss bug.
 #
+# Plus one unit check: tests/units.ts output against tests/expected/units.txt.
+#
 # Regenerate golden files after an intentional behaviour change:
 #   UPDATE_EXPECTED=1 ./tests/run-tests.sh
 # Always read the resulting diff before committing it.
@@ -89,6 +91,25 @@ for FIXTURE_PATH in "${FIXTURES_DIR}"/*.po; do
     sed 's/^/      /' "${ROUNDTRIP_PATH}.diff"
   fi
 done
+
+# Unit checks: tests/units.ts prints decisions, compared against a golden file.
+UNITS_BUNDLE="${BUILD_DIR}/units.mjs"
+UNITS_EXPECTED="${EXPECTED_DIR}/units.txt"
+UNITS_ACTUAL="${BUILD_DIR}/units.txt"
+npx esbuild "${TESTS_DIR}/units.ts" \
+  --bundle --platform=node --format=esm \
+  --outfile="${UNITS_BUNDLE}" --log-level=error
+if [[ $? -ne 0 ]] || ! node "${UNITS_BUNDLE}" > "${UNITS_ACTUAL}"; then
+  report "FAIL" "units" "units (build or run failed)"
+elif [[ "${UPDATE_EXPECTED}" == "1" ]]; then
+  cp "${UNITS_ACTUAL}" "${UNITS_EXPECTED}"
+  report "PASS" "units" "units (golden updated)"
+elif diff -u "${UNITS_EXPECTED}" "${UNITS_ACTUAL}" > "${UNITS_ACTUAL}.diff"; then
+  report "PASS" "units" "units"
+else
+  report "FAIL" "units" "units"
+  sed 's/^/      /' "${UNITS_ACTUAL}.diff"
+fi
 
 echo
 echo "${PASS_COUNT} passed, ${FAIL_COUNT} failed"

@@ -1,0 +1,121 @@
+== ENTRIES ==
+[0]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : ""
+  msgidPlural : null
+  msgstr      : "Project-Id-Version: fixture 1.0\\nLanguage: pl_PL\\nPlural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\\n"
+  msgstrIndex : 1
+  isPlural    : false
+  slotIndexes : []
+  slotValues  : []
+  rawLines    : 5
+[1]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : "New %d day"
+  msgidPlural : "New %d days"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [3,4,5]
+  slotValues  : ["","",""]
+  rawLines    : 6
+[2]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : "Shipped blank %d day"
+  msgidPlural : "Shipped blank %d days"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [3,4,5]
+  slotValues  : ["PL-ONE %d dzień","PL-FEW %d dni",""]
+  rawLines    : 6
+[3]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : "Human filled %d minute"
+  msgidPlural : "Human filled %d minutes"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [3,4,5]
+  slotValues  : ["PL-ONE %d minuta","PL-FEW %d minuty","PL-MANY %d minut"]
+  rawLines    : 6
+[4]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : "Earlier run %d file"
+  msgidPlural : "Earlier run %d files"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [3,4,5]
+  slotValues  : ["PL-ONE %d plik","PL-FEW %d pliki","Earlier run %d files"]
+  rawLines    : 6
+[5]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : "%d MB"
+  msgidPlural : "%d MB"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [3,4,5]
+  slotValues  : ["%d MB","%d MB",""]
+  rawLines    : 6
+[6]
+  msgctxt     : null
+  comments    : null
+  headerField : null
+  msgid       : "A long singular that wraps onto %d line"
+  msgidPlural : "A long plural that wraps onto %d lines with a \\\"quoted\\\" word"
+  msgstr      : null
+  msgstrIndex : -1
+  isPlural    : true
+  slotIndexes : [6,7,8]
+  slotValues  : ["PL-ONE long","PL-FEW long",""]
+  rawLines    : 9
+== SELECTION ==
+standard   : 0
+contextual : 0
+plural     : 1
+  "New %d day" / "New %d days"
+pluginHdrs : 0
+== ALTERED PLUGIN HEADERS ==
+count      : 0
+== EXTRA PLURAL SLOTS ==
+outstanding before : 5
+filled             : 4
+outstanding after  : 4
+  "New %d day"
+    msgstr[0] ""
+    msgstr[1] ""
+    msgstr[2] "New %d days"
+  "Shipped blank %d day"
+    msgstr[0] "PL-ONE %d dzień"
+    msgstr[1] "PL-FEW %d dni"
+    msgstr[2] "Shipped blank %d days"
+  "Human filled %d minute"
+    msgstr[0] "PL-ONE %d minuta"
+    msgstr[1] "PL-FEW %d minuty"
+    msgstr[2] "PL-MANY %d minut"
+  "Earlier run %d file"
+    msgstr[0] "PL-ONE %d plik"
+    msgstr[1] "PL-FEW %d pliki"
+    msgstr[2] "Earlier run %d files"
+  "%d MB"
+    msgstr[0] "%d MB"
+    msgstr[1] "%d MB"
+    msgstr[2] "%d MB"
+  "A long singular that wraps onto %d line"
+    msgstr[0] "PL-ONE long"
+    msgstr[1] "PL-FEW long"
+    msgstr[2] "A long plural that wraps onto %d lines with a \"quoted\" word"

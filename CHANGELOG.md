@@ -2,6 +2,51 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.12.0] - 2026-09-25
+
+### Fixed
+
+- **A plural slot is never left blank.** On a locale with more than two plural forms,
+  earlier versions filled `msgstr[0]` and `msgstr[1]` and left the rest empty for a
+  translator. But `wp i18n make-mo` compiles a partly filled entry, empty slot and all,
+  and WordPress returns that empty string as the translation: the text simply
+  disappeared for every number the slot covers (in Polish, 5–21, 25–31 and so on). Any
+  slot the run cannot translate now gets the English source instead, which is what
+  WordPress shows for any untranslated string. This also repairs `.po` files already
+  shipped with blanks, on their next run
+- **The slot report now appears on every run.** It used to count only entries
+  translated in that run, so a gap was reported once and then never again. It now
+  checks every plural entry, and says what users see rather than "left empty for a
+  translator"
+- **`--dry-run` no longer changes the plugin, and its count is right.** It overwrote
+  `languages/<domain>.pot`, and because the `.po` files were never synced it missed
+  every string added since the last run, reporting "Nothing new to translate" when
+  there was. It now does all its work on temporary copies, running the same steps
+  as a real run
+
+### Changed
+
+- **Plurals are translated with a real number in place of the placeholder.** Each
+  slot is sent with a sample number that selects it (Polish: 1, 2 and 5), and the
+  number is swapped back for the placeholder afterwards. DeepL, given `%d files`, has
+  to guess which form is meant; given `5 files`, it knows. On real plugin strings
+  this fills every Polish slot with the right form (`2 załączniki`, `5 załączników`,
+  where slot 1 used to get the 5+ form), and fixes a plural noun in the singular slot
+  (`alle 1 Tage` → `alle 1 Tag`, `tous les 1 jours` → `tous les 1 jour`). The plain
+  singular and plural are still translated in the same request, as the fallback for
+  any slot whose number does not come back exactly once. No extra requests
+
+### Added
+
+- **One-word labels with context are listed for a spot check** at the end of a run,
+  grouped by string with one line per locale. DeepL gives context little weight on a
+  single word: `_x( 'Uninstall', 'settings section heading' )` came back as a verb in
+  four of four locales, and `_x( 'Archive', 'button label, verb' )` as a noun. Rewording
+  the context was tested and does not fix this reliably, so the tool shows these for a
+  human to check rather than trying to correct them
+- `tests/fixtures/plurals-extra-slots.po` and `tests/units.ts` cover slot filling, the
+  every-run count, and the sample-number logic
+
 ## [1.11.0] - 2026-09-02
 
 ### Changed

@@ -4,7 +4,7 @@
 // prints; tests/run-tests.sh does the comparing. Keep the output format stable
 // — changing it invalidates every golden file at once.
 
-import { parsePo, getUntranslated, findAlteredPluginHeaders, writePo } from '../src/po-parser.js';
+import { parsePo, getUntranslated, findAlteredPluginHeaders, writePo, fillExtraSlotsFromSource, countSourceFilledSlots } from '../src/po-parser.js';
 
 const FIXTURE_PATH = process.argv[2];
 const ROUNDTRIP_PATH = process.argv[3];
@@ -52,3 +52,17 @@ for (const item of altered) {
 }
 
 if (ROUNDTRIP_PATH) writePo(ROUNDTRIP_PATH, entries);
+
+// Slot filling mutates raw lines, so it runs on a fresh parse after the round trip.
+const filledEntries = parsePo(FIXTURE_PATH);
+const outstandingBefore = countSourceFilledSlots(filledEntries);
+const filled = fillExtraSlotsFromSource(filledEntries);
+console.log('== EXTRA PLURAL SLOTS ==');
+console.log(`outstanding before : ${outstandingBefore}`);
+console.log(`filled             : ${filled}`);
+console.log(`outstanding after  : ${countSourceFilledSlots(filledEntries)}`);
+for (const entry of filledEntries.filter(item => item.isPlural)) {
+  const slotLines = entry.msgstrIndexes.map(rawIndex => entry.raw[rawIndex]);
+  console.log(`  ${JSON.stringify(entry.msgid)}`);
+  for (const line of slotLines) console.log(`    ${line}`);
+}

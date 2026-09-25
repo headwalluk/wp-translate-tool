@@ -147,3 +147,7 @@ pluginHdrs : 4
 count      : 2
   Plugin Name: "Tidy Resize Images" -> "Τακτοποίηση και αλλαγή μεγέθους εικόνων"
   Author: "Paul Faulkner" -> "Πολ Φόλκνερ"
+== EXTRA PLURAL SLOTS ==
+outstanding before : 0
+filled             : 0
+outstanding after  : 0

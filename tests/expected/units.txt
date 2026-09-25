@@ -1,0 +1,40 @@
+== SAMPLE NUMBERS ==
+de_DE  : [1,2]
+fr_FR  : [1,2]
+pl_PL  : [1,2,5]
+ru_RU  : [1,2,5]
+cs_CZ  : [1,2,5]
+lt_LT  : [1,2,11]
+lv_LV  : [1,2,0]
+ro_RO  : [1,2,21]
+sl_SI  : [1,2,3,5]
+cy_GB  : [1,2,5,11]
+ga_IE  : [1,2,5,7,11]
+ar     : [0,1,2,5,11,100]
+ja     : [1]
+== COUNT PLACEHOLDER ==
+"%d files"               : "%d"
+"%d files"               : "%d"
+"%s files"               : "%s"
+"%1$s has %2$d files"    : "%2$d"
+"%s of %d"               : "%d"
+"%s and %s"              : null
+"100%% of %d files"      : "%d"
+"Still none"             : null
+== PLAN ==
+"%d files deleted." slots=3
+  {"placeholder":"%d","samples":[1,2,5],"texts":["1 file deleted.","2 files deleted.","5 files deleted."],"substituted":[true,true,true]}
+"%d files deleted." slots=3
+  {"placeholder":"%d","samples":[1,2,5],"texts":["One file deleted.","2 files deleted.","5 files deleted."],"substituted":[false,true,true]}
+"%d files in 2 folders" slots=3
+  null
+"%d files deleted." slots=2
+  null
+== RESTORE ==
+"Usunięto 5 plików."         -> "Usunięto %d plików."
+"Usunięto 15 plików."        -> null
+"Usunięto 5 plików z 5."     -> null
+"Usunięto pięć plików."      -> null
+"Il reste 1 minute."         -> "Il reste %1$d minute."
+== RESOLVE ==
+["Usunięto %d plik.","PLAIN-PLURAL %d","Usunięto %d plików."]

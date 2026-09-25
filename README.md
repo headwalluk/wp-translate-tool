@@ -21,6 +21,9 @@ If you omit the locales argument, the tool will auto-detect them from existing `
 3. Identifies untranslated strings and sends them to DeepL (batched for efficiency; strings with context — an `_x()` `msgctxt` or a `/* translators: */` comment — are translated individually so DeepL can use that context to disambiguate)
 4. Writes translations back to the `.po` files
 5. Compiles all `.po` files into binary `.mo` files
+6. Lists newly translated one-word strings that carried context (e.g. `_x( 'Uninstall', 'settings section heading' )`) for a spot check. DeepL gives context little weight on a single word and often returns the wrong part of speech: a verb for a heading, or a noun for a button
+
+`--dry-run` works on temporary copies: it regenerates the template, syncs each `.po` and counts exactly what a real run would translate, without changing any file in the plugin or calling DeepL.
 
 ### Plural strings (`_n()`)
 
@@ -30,24 +33,27 @@ three for Polish and Russian, and six for Arabic. Getting that count wrong produ
 output that is grammatically broken rather than merely untranslated.
 
 wp-translate writes a `Plural-Forms` header matching the locale before syncing, so
-the right number of `msgstr[n]` slots is generated, then translates the singular and
-plural forms together — telling DeepL that the two strings are forms of one message,
-which keeps them consistent with each other and stops the plural noun landing in the
-singular slot.
+the right number of `msgstr[n]` slots is generated. Each slot is then translated from
+a real number standing in for the placeholder: Polish gets `1 file deleted.`,
+`2 files deleted.` and `5 files deleted.`, which come back as `plik`, `pliki` and
+`plików`, and the number is swapped back for `%d` afterwards. Given `%d files`
+instead, DeepL has to guess which form is meant, and often guesses wrong.
 
 For a short or ambiguous countable noun, add context at source with `_nx()` (the
 plural equivalent of `_x()`). Machine translation cannot recover meaning the source
 never carried: `Review`/`Reviews` alone still resolves inconsistently in German,
 where `_nx( '%d review', '%d reviews', $count, 'customer feedback', ... )` does not.
 
-- **More forms than DeepL can supply.** DeepL returns two forms. A locale needing
-  three or more (Polish's one/few/many, Arabic's six) has slots neither of them
-  fills. Those are **left empty for a translator** and reported in the run summary,
-  rather than filled with a guess — an empty slot is easy to find and complete,
-  whereas a plausible-but-wrong form looks finished and hides.
+- **When a number can't be used.** If the count placeholder can't be identified, or
+  the number doesn't come back exactly once (DeepL wrote it out as a word, say), the
+  slot falls back to the plain singular or plural translation. A third or later slot
+  with no safe translation gets the **English source**, never a blank: WordPress
+  shows an empty slot as blank text, not as English. Every run reports how many slots
+  hold English, including ones left by earlier runs.
 - **Partly translated entries are left alone.** An entry is only translated when
-  every one of its slots is empty, so filling in that third form by hand is safe:
-  a later run will not overwrite it.
+  every one of its slots is empty, so filling in a slot by hand is safe: a later run
+  will not overwrite it. To have wp-translate translate an entry again, clear all of
+  its `msgstr[n]` lines and re-run.
 - **English locales** need no API call at all — both forms come from the source
   strings, spelling-converted where appropriate.
 - **Unknown locales** fall back to the two-form Germanic rule with a warning, never
@@ -236,12 +242,15 @@ src/
   pot.ts          POT file discovery, generation, and locale detection
   po-parser.ts    PO file parsing and round-trip writing
   plurals.ts      Per-locale gettext plural rules (Plural-Forms)
+  plural-samples.ts  Sample numbers per plural slot, placeholder swap and restore
+  spot-check.ts   One-word labels listed for review after a run
   deepl.ts        DeepL API client (batch + contextual + plural translation)
   wp-cli.ts       Shell wrappers for wp-cli i18n commands
 
 tests/
   run-tests.sh    Test harness (npm test)
   driver.ts       Dumps parser results for comparison
+  units.ts        Dumps plural-sample decisions for comparison
   fixtures/       Sample .po files
   expected/       Golden files
 ```
@@ -254,5 +263,6 @@ UPDATE_EXPECTED=1 npm test      # regenerate golden files after an intentional c
 ```
 
 Each fixture is checked two ways: the parser's output is compared against a recorded
-golden file, and parse → write must round-trip byte for byte. Read the diff before
+golden file, and parse → write must round-trip byte for byte. `tests/units.ts` output
+is checked against its own golden file the same way. Read the diff before
 committing a regenerated golden.

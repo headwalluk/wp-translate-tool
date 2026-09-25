@@ -1,0 +1,50 @@
+msgid ""
+msgstr ""
+"Project-Id-Version: fixture 1.0\n"
+"Language: pl_PL\n"
+"Plural-Forms: nplurals=3; plural=(n==1 ? 0 : n%10>=2 && n%10<=4 && (n%100<10 || n%100>=20) ? 1 : 2);\n"
+
+#: a.php:1
+msgid "New %d day"
+msgid_plural "New %d days"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#: a.php:2
+msgid "Shipped blank %d day"
+msgid_plural "Shipped blank %d days"
+msgstr[0] "PL-ONE %d dzień"
+msgstr[1] "PL-FEW %d dni"
+msgstr[2] ""
+
+#: a.php:3
+msgid "Human filled %d minute"
+msgid_plural "Human filled %d minutes"
+msgstr[0] "PL-ONE %d minuta"
+msgstr[1] "PL-FEW %d minuty"
+msgstr[2] "PL-MANY %d minut"
+
+#: a.php:4
+msgid "Earlier run %d file"
+msgid_plural "Earlier run %d files"
+msgstr[0] "PL-ONE %d plik"
+msgstr[1] "PL-FEW %d pliki"
+msgstr[2] "Earlier run %d files"
+
+#: a.php:5
+msgid "%d MB"
+msgid_plural "%d MB"
+msgstr[0] "%d MB"
+msgstr[1] "%d MB"
+msgstr[2] ""
+
+#: a.php:6
+msgid ""
+"A long singular that wraps onto %d line"
+msgid_plural ""
+"A long plural that wraps onto %d lines "
+"with a \"quoted\" word"
+msgstr[0] "PL-ONE long"
+msgstr[1] "PL-FEW long"
+msgstr[2] ""
