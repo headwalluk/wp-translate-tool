@@ -35,6 +35,11 @@ msgstr ""
 msgid "Fixture Theme"
 msgstr ""
 
+#. Description of the theme
+#: style.css
+msgid "A theme filled in by an earlier version."
+msgstr "A theme filled in by an earlier version."
+
 #. Plugin Name of the plugin/theme
 #: legacy.php
 msgid "Legacy Marker Plugin"

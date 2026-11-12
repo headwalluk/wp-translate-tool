@@ -32,7 +32,8 @@ entries.forEach((entry, index) => {
   console.log(`  rawLines    : ${entry.raw.length}`);
 });
 
-const { standard, contextual, plural, pluginHeaders } = getUntranslated(entries);
+// Fixtures are non-English, where a Description left as source goes back for translation.
+const { standard, contextual, plural, pluginHeaders } = getUntranslated(entries, () => true);
 
 console.log('== SELECTION ==');
 console.log(`standard   : ${standard.length}`);

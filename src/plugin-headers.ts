@@ -9,12 +9,10 @@
 //   msgid "Tidy Resize Images"
 //   msgstr ""
 //
-// None of these should be machine-translated. A plugin's name and its author's
-// name are proper nouns — DeepL rendered "Paul Faulkner" as "Πολ Φόλκνερ" in
-// el_GR — and the URI fields are not language-dependent at all. The Description
-// is genuine prose and does translate acceptably, but it belongs to the same
-// header block and is skipped with the rest so that "the plugin header is not
-// translated" stays one rule with no exceptions to remember.
+// Only the Description is translated. A plugin's name and its author's name are
+// proper nouns — DeepL rendered "Paul Faulkner" as "Πολ Φόλκνερ" in el_GR — and
+// the URI fields are not language-dependent at all, so every field except the
+// Description keeps its source text in every locale.
 //
 // Note that a header msgid is not necessarily *only* a header: `Plugin Name` is
 // commonly reused as an admin page title, and gettext gives one msgid one
@@ -39,6 +37,11 @@ const HEADER_FIELDS = new Set([
 // wp-cli writes "<Field> of the plugin" (or "of the theme"). Releases before
 // 2.2 wrote "of the plugin/theme" for both, so that form is accepted too.
 const HEADER_COMMENT = /^#\.\s*(.+?)\s+of the (?:plugin(?:\/theme)?|theme)\s*$/i;
+
+// Whether a header field is translated. Only the Description is prose.
+export function isTranslatedHeaderField(field: string | null): boolean {
+  return field !== null && field.toLowerCase() === 'description';
+}
 
 // The header field a `#.` comment line marks, or null if it marks none.
 export function matchPluginHeaderComment(line: string): string | null {

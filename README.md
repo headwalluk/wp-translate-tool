@@ -73,27 +73,26 @@ For non-English locales, strings whose entire value is a common technical acrony
 
 ### Plugin header fields
 
-WP-CLI extracts the metadata from a plugin's main PHP file comment header — `Plugin
-Name`, `Plugin URI`, `Description`, `Author`, `Author URI` — into the `.pot` as
-ordinary translatable strings. wp-translate never translates them. Each is filled
-from its own source text in every locale, with no API call.
+WP-CLI extracts the metadata from a plugin's main PHP file comment header (`Plugin
+Name`, `Plugin URI`, `Description`, `Author`, `Author URI`) into the `.pot` as
+ordinary translatable strings. wp-translate translates only the `Description`. Every
+other field is set to its own source text in every locale, with no API call.
 
-This is not a stylistic preference. A plugin name and an author's name are proper
-nouns: DeepL rendered `Paul Faulkner` as `Πολ Φόλκνερ` in `el_GR`, and the URI
-fields are not language-dependent at all. The `Description` is genuine prose and
-does translate acceptably, but it is skipped with the rest so the rule stays simple
-— the plugin header is not translated, with no exceptions to remember.
+A plugin name and an author's name are proper nouns: DeepL rendered `Paul Faulkner`
+as `Πολ Φόλκνερ` in `el_GR`. The URI fields don't depend on language at all. The
+`Description` is prose, and is translated like any other string.
 
 - **A header string may also be a UI string.** `Plugin Name` is commonly reused as
   an admin page title, and gettext gives one `msgid` one translation, so those
   occurrences stay in the source language too. For a product name that is the
   wanted behaviour.
-- **Fields already translated are reported, never rewritten.** A plugin translated
-  by an earlier version still carries them. Nothing in a `.po` distinguishes a
-  machine translation that should not have been made from a localisation someone
-  chose deliberately, so wp-translate warns and leaves it alone. To reset one,
-  clear its `msgstr` and re-run — the next run fills it from source.
-- **Theme headers** (`Theme Name`, `Theme URI`, …) are recognised the same way.
+- **Fields already translated are reset.** A plugin translated by an earlier version
+  may carry a translated name or author. The next run sets each one back to its
+  source text and lists what it reset.
+- **A `Description` left as source is translated.** Versions 1.11 and 1.12 filled it
+  with the source text. The next run translates it, except where the source is
+  already right for the locale (`en_US`, or `en_GB` with no American spellings).
+- **Theme headers** (`Theme Name`, `Theme URI`, `Description`, …) follow the same rule.
 
 ### Agent instructions
 

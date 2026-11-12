@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.13.0] - 2026-11-12
+
+### Changed
+
+- **The plugin `Description` is translated.** It is the only header field that is.
+  `Plugin Name`, `Plugin URI`, `Author`, `Author URI` and the theme equivalents stay
+  as their source text in every locale. A `Description` that 1.11 or 1.12 filled with
+  the source text is translated on the next run, unless the source is already right
+  for the locale (`en_US`, or `en_GB` with no American spellings)
+- **Header fields that carry a translation are reset to the source text.** 1.11 and
+  1.12 reported these and left them alone. The run now resets each one, except the
+  `Description`, and lists what it reset
+
 ## [1.12.0] - 2026-09-25
 
 ### Fixed

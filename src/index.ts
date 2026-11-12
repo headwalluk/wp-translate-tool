@@ -5,7 +5,7 @@ import { createInterface } from 'readline';
 import { loadConfig } from './config.js';
 import { validateLocales, checkDependencies } from './validation.js';
 import { findOrCreatePot, detectLocales } from './pot.js';
-import { parsePo, injectHeaders, applyTranslations, writePo, getUntranslated, findAlteredPluginHeaders, setIdentityTranslation, setPluralTranslations, fillExtraSlotsFromSource, countSourceFilledSlots, sanitize, unsanitize, AlteredPluginHeader } from './po-parser.js';
+import { PoEntry, parsePo, injectHeaders, applyTranslations, writePo, getUntranslated, findAlteredPluginHeaders, setIdentityTranslation, setPluralTranslations, fillExtraSlotsFromSource, countSourceFilledSlots, sanitize, unsanitize, AlteredPluginHeader } from './po-parser.js';
 import { getPluralForms, formatPluralForms } from './plurals.js';
 import { findOneWordLabels, reportOneWordLabels, OneWordLabel } from './spot-check.js';
 import { translateBatch, translateContextual, translatePlurals, checkUsage } from './deepl.js';
@@ -107,22 +107,18 @@ function truncateForReport(text: string): string {
     : text;
 }
 
-// Report header fields that already carry a translation, without changing them.
-// Earlier versions of this tool sent these to DeepL, so a plugin translated
-// before the skip existed still has them in its .po (and its compiled .mo).
-function reportAlteredPluginHeaders(locale: string, altered: AlteredPluginHeader[]): void {
+// Report header fields other than Description that carried a translation and are reset to source.
+function reportAlteredPluginHeaders(locale: string, altered: AlteredPluginHeader[], dryRun: boolean): void {
   if (altered.length === 0) return;
 
-  const subject = altered.length === 1 ? 'field carries' : 'fields carry';
-  console.warn(`   ${locale}: WARNING — ${altered.length} plugin-header ${subject} a translation`);
-  console.warn(`      that differs from the source. Left unchanged: it may be deliberate.`);
+  const label = altered.length === 1 ? 'field' : 'fields';
+  const verb = dryRun ? 'would be reset' : 'reset';
+  console.log(`   ${locale}: ${altered.length} translated plugin-header ${label} ${verb} to the source text:`);
 
   const width = Math.max(...altered.map(a => a.field.length));
   for (const item of altered) {
-    console.warn(`      ${item.field.padEnd(width)} : ${truncateForReport(item.translation)}`);
+    console.log(`      ${item.field.padEnd(width)} : ${truncateForReport(item.translation)}`);
   }
-
-  console.warn(`      To reset one to the source text, clear its msgstr and re-run.`);
 }
 
 // Report plural slots holding the English source, in terms of what users see.
@@ -149,23 +145,30 @@ async function processLocale(
 ): Promise<LocaleResult> {
   const entries = parsePo(poFile);
 
-  const { standard, contextual, plural, pluginHeaders } = getUntranslated(entries);
-  const total = standard.length + contextual.length + plural.length;
-
-  // Plugin/theme header fields (Plugin Name, Author, the URIs, Description) are
-  // filled from their own source string in every locale, English or not, and
-  // never sent to DeepL. They are deliberately outside `total`: nothing here is
-  // translated, so counting them as translations would overstate the run.
-  for (const entry of pluginHeaders) setIdentityTranslation(entry);
-  if (pluginHeaders.length > 0) {
-    const label = pluginHeaders.length === 1 ? 'field' : 'fields';
-    console.log(`   ${locale}: ${pluginHeaders.length} plugin-header ${label} kept as source (not translated).`);
-  }
-  reportAlteredPluginHeaders(locale, findAlteredPluginHeaders(entries));
-
   // English targets never go to DeepL (en->en is a no-op there). en/en_US pass
   // through verbatim; en_GB/en_AU/... get local American->British conversion.
   const mode = englishTarget(locale);
+
+  // A Description left as its source by an earlier version is translated now,
+  // unless the source is already right for this locale.
+  const reofferDescription = (entry: PoEntry): boolean => {
+    const source = unsanitize(entry.msgid!);
+    return mode === 'none' || (mode === 'gb-convert' && toBritish(source) !== source);
+  };
+  const altered = findAlteredPluginHeaders(entries);
+  const { standard, contextual, plural, pluginHeaders } = getUntranslated(entries, reofferDescription);
+  const total = standard.length + contextual.length + plural.length;
+
+  // Header fields other than Description (Plugin Name, Author, the URIs) are set
+  // to their own source string in every locale and never sent to DeepL. They are
+  // outside `total`, which counts translations.
+  for (const entry of pluginHeaders) setIdentityTranslation(entry);
+  const filledFromSource = pluginHeaders.length - altered.length;
+  if (filledFromSource > 0) {
+    const label = filledFromSource === 1 ? 'field' : 'fields';
+    console.log(`   ${locale}: ${filledFromSource} plugin-header ${label} kept as source (not translated).`);
+  }
+  reportAlteredPluginHeaders(locale, altered, dryRun);
   let oneWordLabels: OneWordLabel[] = [];
 
   if (total === 0) {

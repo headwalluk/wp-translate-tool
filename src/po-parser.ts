@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from 'fs';
 import { PluralForms, formatPluralForms } from './plurals.js';
-import { matchPluginHeaderComment } from './plugin-headers.js';
+import { matchPluginHeaderComment, isTranslatedHeaderField } from './plugin-headers.js';
 
 export interface PoEntry {
   raw: string[];
@@ -336,9 +336,9 @@ export interface UntranslatedBuckets {
   standard: PoEntry[];
   contextual: PoEntry[];
   plural: PoEntry[];
-  // Plugin/theme header fields with an empty msgstr. These never reach DeepL —
-  // they are filled from their own source string (see setIdentityTranslation)
-  // so that they settle, rather than being re-offered on every run.
+  // Plugin/theme header fields other than Description whose msgstr isn't their
+  // source text (empty, or translated by an earlier run). These never reach
+  // DeepL: they are set to their own source string (see setIdentityTranslation).
   pluginHeaders: PoEntry[];
 }
 
@@ -358,20 +358,28 @@ function isUntranslatedPlural(entry: PoEntry): boolean {
   return allEmpty;
 }
 
-export function getUntranslated(entries: PoEntry[]): UntranslatedBuckets {
+// reofferDescription decides whether a Description whose msgstr equals its
+// source goes back for translation: versions before 1.13 filled it that way.
+export function getUntranslated(
+  entries: PoEntry[],
+  reofferDescription: (entry: PoEntry) => boolean = () => false,
+): UntranslatedBuckets {
   const named = entries.filter(e => e.msgid && e.msgid !== '');
-  // Header fields are split off before anything else, so no later bucket can
-  // pick one up and send it for translation.
-  const headerFields = named.filter(e => e.pluginHeaderField !== null);
-  const body = named.filter(e => e.pluginHeaderField === null);
-  const needs = body.filter(e => !e.isPlural && e.msgstr === '');
+  // Untranslated header fields are split off before anything else, so no later
+  // bucket can pick one up and send it for translation.
+  const isDescription = (e: PoEntry) => isTranslatedHeaderField(e.pluginHeaderField);
+  const headerFields = named.filter(e => e.pluginHeaderField !== null && !isDescription(e));
+  const body = named.filter(e => e.pluginHeaderField === null || isDescription(e));
+  const needs = body.filter(e => !e.isPlural && (
+    e.msgstr === '' || (isDescription(e) && e.msgstr === e.msgid && reofferDescription(e))
+  ));
   // Contextual = anything that carries disambiguating context for DeepL: a
   // msgctxt (_x()) or an extracted translator comment (#.).
   return {
     standard: needs.filter(e => !e.msgctxt && !e.extractedComments),
     contextual: needs.filter(e => e.msgctxt || e.extractedComments),
     plural: body.filter(e => e.isPlural && isUntranslatedPlural(e)),
-    pluginHeaders: headerFields.filter(e => e.msgstr === ''),
+    pluginHeaders: headerFields.filter(e => e.msgstr !== e.msgid),
   };
 }
 
@@ -381,18 +389,13 @@ export interface AlteredPluginHeader {
   translation: string;
 }
 
-// Header fields already carrying a translation that differs from the source —
-// typically written by a run of this tool from before header fields were
-// skipped, but possibly a deliberate human choice.
-//
-// These are reported and never rewritten. Nothing in the file distinguishes a
-// machine translation that should not have been made from a localisation
-// someone chose on purpose, and silently reverting the latter is the worse
-// error of the two. Clearing the msgstr by hand puts the entry back in the
-// pluginHeaders bucket, where the next run fills it from source.
+// Header fields other than Description that carry a translation. The run
+// resets them to source (they are in the pluginHeaders bucket); this lists
+// them so the reset is reported.
 export function findAlteredPluginHeaders(entries: PoEntry[]): AlteredPluginHeader[] {
   return entries
-    .filter(e => e.pluginHeaderField !== null && e.msgid && e.msgstr && e.msgstr !== e.msgid)
+    .filter(e => e.pluginHeaderField !== null && !isTranslatedHeaderField(e.pluginHeaderField)
+      && e.msgid && e.msgstr && e.msgstr !== e.msgid)
     .map(e => ({
       field: e.pluginHeaderField!,
       source: unsanitize(e.msgid!),
