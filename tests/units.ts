@@ -4,6 +4,10 @@
 
 import { getPluralForms } from '../src/plurals.js';
 import { sampleNumbers, findCountPlaceholder, planSampleTexts, restorePlaceholder, resolveSampleTranslations } from '../src/plural-samples.js';
+import { findAgentFiles } from '../src/instructions.js';
+import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'fs';
+import { tmpdir } from 'os';
+import { dirname, join } from 'path';
 
 console.log('== SAMPLE NUMBERS ==');
 for (const locale of ['de_DE', 'fr_FR', 'pl_PL', 'ru_RU', 'cs_CZ', 'lt_LT', 'lv_LV', 'ro_RO', 'sl_SI', 'cy_GB', 'ga_IE', 'ar', 'ja']) {
@@ -57,3 +61,32 @@ console.log(JSON.stringify(resolveSampleTranslations(
   ['Usunięto 1 plik.', 'Usunięto dwa pliki.', 'Usunięto 5 plików.'],
   ['PLAIN-SINGULAR %d', 'PLAIN-PLURAL %d'],
 )));
+
+console.log('== AGENT FILES ==');
+// Each case: files present (a trailing * means the file holds a block), and an optional forced file.
+const AGENT_FILE_CASES: [string[], string | null][] = [
+  [['AGENTS.md', 'CLAUDE.md*'], null],
+  [['AGENTS.md*', 'CLAUDE.md'], null],
+  [['AGENTS.md*', 'CLAUDE.md*'], null],
+  [['AGENTS.md', 'CLAUDE.md'], null],
+  [['CLAUDE.md*'], null],
+  [['AGENTS.md', '.github/copilot-instructions.md*'], null],
+  [[], null],
+  [['AGENTS.md', 'CLAUDE.md'], 'CLAUDE.md'],
+  [['AGENTS.md*', 'CLAUDE.md'], 'CLAUDE.md'],
+  [['AGENTS.md'], 'docs/agents.md'],
+];
+const BLOCK_TEXT = '<!-- wp-translate:begin v=1.0.0 hash=00 -->\nbody\n<!-- wp-translate:end -->\n';
+for (const [fileSpecs, forcedFile] of AGENT_FILE_CASES) {
+  const caseDir = mkdtempSync(join(tmpdir(), 'wp-translate-units-'));
+  for (const fileSpec of fileSpecs) {
+    const fileName = fileSpec.replace(/\*$/, '');
+    mkdirSync(dirname(join(caseDir, fileName)), { recursive: true });
+    writeFileSync(join(caseDir, fileName), `# ${fileName}\n${fileSpec.endsWith('*') ? BLOCK_TEXT : ''}`);
+  }
+  const result = findAgentFiles(caseDir, forcedFile);
+  rmSync(caseDir, { recursive: true, force: true });
+  const label = `${JSON.stringify(fileSpecs)}${forcedFile !== null ? ` forced=${forcedFile}` : ''}`;
+  console.log(`${label}`);
+  console.log(`  ${JSON.stringify(result)}`);
+}

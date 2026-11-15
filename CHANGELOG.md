@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [1.14.0] - 2026-11-15
+
+### Added
+
+- **`--instructions-file <path>`** makes `--check-instructions` and `--sync-instructions`
+  use that file instead of picking one. The file must already exist
+- **A warning when more than one file holds a wp-translate block.** Only one is managed,
+  so the others drift. The exit code still depends only on the managed file
+
+### Fixed
+
+- **The instructions check now uses the file that already holds the block.** It used to
+  pick the first of `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md` and
+  `GEMINI.md` that existed. With the block in `CLAUDE.md` and an `AGENTS.md` alongside,
+  `--check-instructions` reported the block missing and exited 2, and
+  `--sync-instructions` would have added a second copy to `AGENTS.md`. That order now
+  only decides where a new block goes
+- **The "also present" note says why the file was chosen**
+
 ## [1.13.0] - 2026-11-12
 
 ### Changed

@@ -1,6 +1,6 @@
-import { existsSync, copyFileSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'fs';
+import { existsSync, copyFileSync, mkdtempSync, readFileSync, rmSync, statSync, writeFileSync } from 'fs';
 import { tmpdir } from 'os';
-import { basename, join, resolve } from 'path';
+import { basename, join, relative, resolve } from 'path';
 import { createInterface } from 'readline';
 import { loadConfig } from './config.js';
 import { validateLocales, checkDependencies } from './validation.js';
@@ -31,7 +31,10 @@ function printHelp(): void {
   console.log(`  ${bin} --version, -v               Print version`);
   console.log(`  ${bin} --help, -h                  Show this help\n`);
   console.log(`Options:`);
-  console.log(`  --yes, -y     Skip the confirmation prompt for --sync-instructions\n`);
+  console.log(`  --yes, -y     Skip the confirmation prompt for --sync-instructions`);
+  console.log(`  --instructions-file <path>`);
+  console.log(`                Check/sync this file instead of picking one (path relative`);
+  console.log(`                to the plugin; the file must already exist)\n`);
   console.log(`Arguments:`);
   console.log(`  plugin-path   Path to the WordPress plugin directory`);
   console.log(`  locales       Comma-separated list (e.g., en_GB,fr_FR,de_DE)`);
@@ -259,16 +262,30 @@ function confirm(question: string): Promise<boolean> {
 }
 
 // Handle --check-instructions / --sync-instructions. Returns the process exit code.
-async function runInstructions(pluginPath: string, opts: { sync: boolean; assumeYes: boolean }): Promise<number> {
-  const { sync, assumeYes } = opts;
+async function runInstructions(
+  pluginPath: string,
+  opts: { sync: boolean; assumeYes: boolean; instructionsFile: string | null },
+): Promise<number> {
+  const { sync, assumeYes, instructionsFile } = opts;
 
   if (!existsSync(pluginPath)) {
     console.error(`Error: plugin path not found: ${pluginPath}`);
     return 1;
   }
 
+  let forcedFile: string | null = null;
+  if (instructionsFile !== null) {
+    const forcedPath = resolve(pluginPath, instructionsFile);
+    if (!existsSync(forcedPath) || !statSync(forcedPath).isFile()) {
+      console.error(`Error: instructions file not found: ${forcedPath}`);
+      console.error(`wp-translate only updates existing files.`);
+      return 1;
+    }
+    forcedFile = relative(pluginPath, forcedPath);
+  }
+
   const looked = 'AGENTS.md, CLAUDE.md, .github/copilot-instructions.md, GEMINI.md';
-  const { target, others } = findAgentFiles(pluginPath);
+  const { target, reason, others, otherBlocks } = findAgentFiles(pluginPath, forcedFile);
 
   if (!target) {
     console.log(`No agent-instructions file found (looked for: ${looked}).`);
@@ -281,8 +298,19 @@ async function runInstructions(pluginPath: string, opts: { sync: boolean; assume
   const content = readFileSync(filePath, 'utf8');
   const status = blockStatus(content, domain);
 
+  const reasonText: Record<string, string> = {
+    'forced': `${target} chosen with --instructions-file`,
+    'block': `${target} holds the wp-translate block`,
+    'precedence': `${target} chosen first; no file holds a wp-translate block yet`,
+  };
   if (others.length > 0) {
-    console.log(`Note: also present, left untouched: ${others.join(', ')}`);
+    console.log(`Note: ${reasonText[reason ?? 'precedence']}; also present, left untouched: ${others.join(', ')}`);
+  } else if (reason === 'forced') {
+    console.log(`Note: ${reasonText.forced}.`);
+  }
+  // Exit code follows the target alone, so a stray copy doesn't fail CI.
+  for (const strayFile of otherBlocks) {
+    console.log(`Warning: ${strayFile} also holds a wp-translate block. Only ${target} is managed; remove the other copy.`);
   }
 
   const labels: Record<BlockStatus, string> = {
@@ -350,16 +378,34 @@ async function main() {
     return;
   }
 
-  if (args.includes('--check-instructions') || args.includes('--sync-instructions')) {
+  const instructionsMode = args.includes('--check-instructions') || args.includes('--sync-instructions');
+  const instructionsFileIndex = args.indexOf('--instructions-file');
+  if (instructionsFileIndex !== -1 && !instructionsMode) {
+    console.error('Error: --instructions-file needs --check-instructions or --sync-instructions.');
+    process.exit(1);
+  }
+
+  if (instructionsMode) {
     const sync = args.includes('--sync-instructions');
     const assumeYes = args.includes('--yes') || args.includes('-y');
-    const positional = args.filter(a => !a.startsWith('-'));
+    let instructionsFile: string | null = null;
+    if (instructionsFileIndex !== -1) {
+      const flagValue = args[instructionsFileIndex + 1];
+      if (flagValue === undefined || flagValue.startsWith('-')) {
+        console.error('Error: --instructions-file needs a path.');
+        process.exit(1);
+      }
+      instructionsFile = flagValue;
+    }
+    // The flag's value is not a positional argument.
+    const positional = args.filter((arg, argIndex) =>
+      !arg.startsWith('-') && !(instructionsFileIndex !== -1 && argIndex === instructionsFileIndex + 1));
     const pluginPath = positional[0] ? resolve(positional[0]) : '';
     if (!pluginPath) {
       console.error('Error: a plugin path is required for instruction sync.');
       process.exit(1);
     }
-    process.exit(await runInstructions(pluginPath, { sync, assumeYes }));
+    process.exit(await runInstructions(pluginPath, { sync, assumeYes, instructionsFile }));
   }
 
   const dryRun = args.includes('--dry-run');

@@ -111,6 +111,56 @@ else
   sed 's/^/      /' "${UNITS_ACTUAL}.diff"
 fi
 
+# Instructions checks: run the real CLI against temporary plugin layouts.
+CLI_BUNDLE="${BUILD_DIR}/wp-translate.mjs"
+STALE_BLOCK=$'<!-- wp-translate:begin v=0.0.0 hash=0 -->\n<!-- wp-translate:end -->'
+npx esbuild "${PROJECT_DIR}/src/index.ts" \
+  --bundle --platform=node --format=esm --define:__VERSION__='"test"' \
+  --outfile="${CLI_BUNDLE}" --log-level=error
+if [[ $? -ne 0 ]]; then
+  report "FAIL" "instr" "cli (build failed)"
+else
+  # Make a plugin dir holding AGENTS.md (no block) and CLAUDE.md with the given content.
+  make_instructions_plugin() {
+    local CLAUDE_CONTENT="$1"
+    local PLUGIN_DIR
+    PLUGIN_DIR="$(mktemp -d "${BUILD_DIR}/plugin-XXXXXX")"
+    printf '# Shared brief\n' > "${PLUGIN_DIR}/AGENTS.md"
+    printf '# Plugin\n%s\n' "${CLAUDE_CONTENT}" > "${PLUGIN_DIR}/CLAUDE.md"
+    cp "${PLUGIN_DIR}/AGENTS.md" "${PLUGIN_DIR}/AGENTS.md.orig"
+    echo "${PLUGIN_DIR}"
+  }
+
+  # Sync then check; pass when CLAUDE.md gets a current block and AGENTS.md is untouched.
+  check_instructions_case() {
+    local CASE_NAME="$1"
+    local PLUGIN_DIR="$2"
+    shift 2
+    local EXTRA_ARGS=("$@")
+    if node "${CLI_BUNDLE}" "${PLUGIN_DIR}" --sync-instructions --yes "${EXTRA_ARGS[@]}" > "${PLUGIN_DIR}/sync.log" \
+      && node "${CLI_BUNDLE}" "${PLUGIN_DIR}" --check-instructions "${EXTRA_ARGS[@]}" > "${PLUGIN_DIR}/check.log" \
+      && grep -q '^CLAUDE.md (text domain: .*): up to date\.$' "${PLUGIN_DIR}/check.log" \
+      && cmp -s "${PLUGIN_DIR}/AGENTS.md" "${PLUGIN_DIR}/AGENTS.md.orig"; then
+      report "PASS" "instr" "${CASE_NAME}"
+    else
+      report "FAIL" "instr" "${CASE_NAME}"
+      sed 's/^/      /' "${PLUGIN_DIR}/sync.log" "${PLUGIN_DIR}/check.log" 2>/dev/null
+    fi
+  }
+
+  check_instructions_case "block-in-claude" "$(make_instructions_plugin "${STALE_BLOCK}")"
+  check_instructions_case "forced-claude" "$(make_instructions_plugin "")" --instructions-file CLAUDE.md
+
+  MISSING_PLUGIN_DIR="$(make_instructions_plugin "")"
+  node "${CLI_BUNDLE}" "${MISSING_PLUGIN_DIR}" --check-instructions --instructions-file missing.md > /dev/null 2>&1
+  if [[ $? -eq 1 ]]; then
+    report "PASS" "instr" "forced-missing"
+  else
+    report "FAIL" "instr" "forced-missing (expected exit 1)"
+  fi
+  rm -rf "${BUILD_DIR}"/plugin-*
+fi
+
 echo
 echo "${PASS_COUNT} passed, ${FAIL_COUNT} failed"
 

@@ -38,3 +38,24 @@ ja     : [1]
 "Il reste 1 minute."         -> "Il reste %1$d minute."
 == RESOLVE ==
 ["Usunięto %d plik.","PLAIN-PLURAL %d","Usunięto %d plików."]
+== AGENT FILES ==
+["AGENTS.md","CLAUDE.md*"]
+  {"target":"CLAUDE.md","reason":"block","others":["AGENTS.md"],"otherBlocks":[]}
+["AGENTS.md*","CLAUDE.md"]
+  {"target":"AGENTS.md","reason":"block","others":["CLAUDE.md"],"otherBlocks":[]}
+["AGENTS.md*","CLAUDE.md*"]
+  {"target":"AGENTS.md","reason":"block","others":["CLAUDE.md"],"otherBlocks":["CLAUDE.md"]}
+["AGENTS.md","CLAUDE.md"]
+  {"target":"AGENTS.md","reason":"precedence","others":["CLAUDE.md"],"otherBlocks":[]}
+["CLAUDE.md*"]
+  {"target":"CLAUDE.md","reason":"block","others":[],"otherBlocks":[]}
+["AGENTS.md",".github/copilot-instructions.md*"]
+  {"target":".github/copilot-instructions.md","reason":"block","others":["AGENTS.md"],"otherBlocks":[]}
+[]
+  {"target":null,"reason":null,"others":[],"otherBlocks":[]}
+["AGENTS.md","CLAUDE.md"] forced=CLAUDE.md
+  {"target":"CLAUDE.md","reason":"forced","others":["AGENTS.md"],"otherBlocks":[]}
+["AGENTS.md*","CLAUDE.md"] forced=CLAUDE.md
+  {"target":"CLAUDE.md","reason":"forced","others":["AGENTS.md"],"otherBlocks":["AGENTS.md"]}
+["AGENTS.md"] forced=docs/agents.md
+  {"target":"docs/agents.md","reason":"forced","others":["AGENTS.md"],"otherBlocks":[]}

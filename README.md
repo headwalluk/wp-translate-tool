@@ -103,7 +103,9 @@ wp-translate ./my-plugin --check-instructions   # report status (exit 2 if a syn
 wp-translate ./my-plugin --sync-instructions    # inject/update the block (--yes to skip the prompt)
 ```
 
-- **Existing files only** — it updates an existing `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, or `GEMINI.md` (in that precedence order), and never creates one.
+- **Existing files only** — it updates the existing file that already holds the block. If none does, it uses the first of `AGENTS.md`, `CLAUDE.md`, `.github/copilot-instructions.md`, `GEMINI.md` that exists. It never creates a file.
+- **Choosing the file** — `--instructions-file <path>` (relative to the plugin) checks or syncs that file instead, e.g. `--instructions-file CLAUDE.md` when `AGENTS.md` is a shared file that must stay identical across repositories. The file must already exist.
+- If more than one file holds a block, only the chosen one is managed and the others are named in a warning. The exit code depends only on the chosen file.
 - The block is delimited by `wp-translate:begin/end` markers; nothing outside them is touched. It carries a version, so `--check-instructions` can tell you when an update is available, and a hand-edited block is detected and reported before being overwritten.
 
 ---

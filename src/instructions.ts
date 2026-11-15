@@ -152,15 +152,39 @@ const AGENT_FILES = [
 
 export type BlockStatus = 'current' | 'stale' | 'newer' | 'missing-block' | 'drift';
 
+export type TargetReason = 'forced' | 'block' | 'precedence';
+
 export interface AgentFiles {
-  target: string | null;   // highest-precedence existing file (relative name)
-  others: string[];        // other existing files, left untouched
+  target: string | null;        // file to check/sync (relative name)
+  reason: TargetReason | null;  // why `target` was chosen; null when there is none
+  others: string[];             // other recognised files present, left untouched
+  otherBlocks: string[];        // those of `others` that also hold a block
 }
 
-// Find existing agent-instruction files (existing only — never created).
-export function findAgentFiles(pluginDir: string): AgentFiles {
+// Pick the file to manage: `forcedFile` if given, else the first recognised file holding a block, else the first present.
+export function findAgentFiles(pluginDir: string, forcedFile: string | null = null): AgentFiles {
   const present = AGENT_FILES.filter(rel => existsSync(join(pluginDir, rel)));
-  return { target: present[0] ?? null, others: present.slice(1) };
+  const withBlock = present.filter(rel => hasBlock(readFileSync(join(pluginDir, rel), 'utf8')));
+
+  let target: string | null = null;
+  let reason: TargetReason | null = null;
+  if (forcedFile !== null) {
+    target = forcedFile;
+    reason = 'forced';
+  } else if (withBlock.length > 0) {
+    target = withBlock[0];
+    reason = 'block';
+  } else if (present.length > 0) {
+    target = present[0];
+    reason = 'precedence';
+  }
+
+  return {
+    target,
+    reason,
+    others: present.filter(rel => rel !== target),
+    otherBlocks: withBlock.filter(rel => rel !== target),
+  };
 }
 
 export function sha256(text: string): string {
@@ -198,6 +222,11 @@ interface ParsedBlock {
   body: string;
   start: number;  // index of begin marker
   end: number;    // index just past end marker
+}
+
+// True if `content` holds a complete block (begin and end markers).
+export function hasBlock(content: string): boolean {
+  return findBlock(content) !== null;
 }
 
 function findBlock(content: string): ParsedBlock | null {
